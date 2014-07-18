@@ -1,0 +1,9 @@
+[Core]
+Name = EveCentral
+Module = evecentral
+
+[Documentation]
+Description = Get prices in Jita via EveCentral
+
+[Python]
+Version=3
