@@ -1,0 +1,9 @@
+[Core]
+Name = TimeBot
+Module = timeBot
+
+[Documentation]
+Description = what time is it ?
+
+[Python]
+Version=2+
