@@ -63,18 +63,30 @@ class Map(object):
         for row in rowset.findall('row'):
             system = int(row.attrib['solarSystemID'])
             name = row.attrib['solarSystemName']
-            faction_id = int(row.attrib['occupyingFactionID']) or None
-            faction_name = row.attrib['occupyingFactionName'] or None
+            #faction_id = int(row.attrib['occupyingFactionID']) or None
+            #faction_name = row.attrib['occupyingFactionName'] or None
+            owning_faction_id = int(row.attrib['owningFactionID'])
+            owning_faction_name = row.attrib['owningFactionName']
+            occupying_faction_id = int(row.attrib['occupyingFactionID']) or None
+            occupying_faction_name = row.attrib['occupyingFactionName'] or None
             contested = (row.attrib['contested'] == 'True')
+            victory_points = int(row.attrib['victoryPoints'])
+            victory_point_threshold = int(row.attrib['victoryPointThreshold'])
 
             results[system] = {
                 'id': system,
                 'name': name,
-                'faction': {
-                    'id': faction_id,
-                    'name': faction_name,
+                'owner': {
+                    'id': owning_faction_id,
+                    'name': owning_faction_name,
+                },
+                'occupier': {
+                    'id': occupying_faction_id,
+                    'name': occupying_faction_name,
                 },
                 'contested': contested,
+                'vp': victory_points,
+                'vpneeded': victory_point_threshold,
             }
 
         return api.APIResult(results, api_result.timestamp, api_result.expires)
