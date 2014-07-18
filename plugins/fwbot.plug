@@ -1,0 +1,9 @@
+[Core]
+Name = fw
+Module = FWBot
+
+[Documentation]
+Description = FW info
+
+[Python]
+Version=3
