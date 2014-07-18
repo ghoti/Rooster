@@ -1,0 +1,9 @@
+[Core]
+Name = Who
+Module = who
+
+[Documentation]
+Description = gets player info from evewho
+
+[Python]
+Version=3
