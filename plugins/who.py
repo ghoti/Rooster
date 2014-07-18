@@ -66,7 +66,7 @@ class Who(BotPlugin):
 
         Returns KB stats, corp, alliance, and length of service"""
 
-        if not args or not mess:
+        if not args[0]:
             return 'Should I read your mind on who to look for?'
         colours.clear()
         target = ''
