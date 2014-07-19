@@ -13,7 +13,7 @@ class FWBot(BotPlugin):
 
     @botcmd(split_args_with=' ')
     def fw(self, mess, args):
-        """!fw <system> will return the current fw status of a sysem including contestion rates"""
+        """!fw <system> will return the current fw status of a system including contention rates"""
         if not args[0]:
             return "Should I guess the system for you...?"
         api = evelink.map.Map()
@@ -25,13 +25,20 @@ class FWBot(BotPlugin):
             return "Error in db?!"
         try:
             c = conn.cursor()
-            c.execute("select itemID from mapDenormalize where itemName like '%{}%' collate nocase".format(args[0]))
-            systemid = c.fetchone()[0]
+            #just in case there is an exact match to our input instead of trying to search through, i dunno
+            try:
+                c.execute("select itemID from mapDenormalize where itemName = '{0}' collate nocase".format(args[0]))
+                systemid = c.fetchone()[0]
+            except:
+                c.execute("select itemID from mapDenormalize where itemName like '%{0}%' collate nocase".format(
+                    args[0]))
+                systemid = c.fetchone()[0]
 
             name = flist.result[systemid]['name']
             tstamp = arrow.get(flist.expires).humanize()
             owner = flist.result[systemid]['owner']['name']
             occupier = flist.result[systemid]['occupier']['name']
+            #API reports None as occupier is the owner actually owns the system.
             if occupier is None:
                 occupier = owner
 
@@ -39,11 +46,11 @@ class FWBot(BotPlugin):
                 vp = flist.result[systemid]['vp']
                 needed = flist.result[systemid]['vpneeded']
                 pcent = "{0:.1f}%".format(float(vp/needed*100))
-                return "The {} system of {} currently owned by the {} is {} contested! (new data available {})".format(
-                    owner, name, occupier, pcent, tstamp)
+
+                return "{}: Currently occupied by the {} is {} contested! (new data {})".format(
+                    name, occupier, pcent, tstamp)
             else:
-                return "The {} system of {} currently owned by the {} is stable! (new data available {})".format(
-                    owner, name, occupier, tstamp)
+                return "{}: Currently occupied by the {} is stable! (new data {})".format(name, occupier, tstamp)
         #any error just tell the user they are dum
         except Exception:
             return "System {} not found or not in FW".format(args[0])
