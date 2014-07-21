@@ -1,0 +1,9 @@
+[Core]
+Name = notificationbot
+Module = NotificationBot
+
+[Documentation]
+Description = Spam Useful Alliance Notifications to various jabber rooms
+
+[Python]
+Version=3

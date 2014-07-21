@@ -2,7 +2,7 @@ Rooster is a badly written bot for jabber.
 
 Included (for various reasons because outdated or modifications I had to make) are evelink and sleekxmpp
 
-Required modules (so far) are sqlite3, arrow, beautifulsoup4, and requests
+Required modules (so far) are configparser, sqlite3, arrow, beautifulsoup4, and requests
 
 Also required is the EVE SDE in sqlite format (named static.db and in the root directory)
 
