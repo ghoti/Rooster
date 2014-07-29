@@ -129,7 +129,7 @@ class NotificationBot(BotPlugin):
             alliance = all.character_names_from_ids(id_list=(sbu[id]['allianceID']))[0][sbu[id]['allianceID']]
             #alliance = self.getname(sbu[id]['allianceID'])[0][sbu[id]['allianceID']]
         message = 'An SBU has been anchored in {0} by a member of {1}/{2}!!!'.format(system, corp, alliance)
-        self.send('leadership@conference.j4lp.com', message, message_type="group_chat")
+        self.send('leadership@conference.j4lp.com', message, message_type="groupchat")
 
     def posfuel(self, id, toon):
         #I HAS NO IDEA WHAT INFO IS USEFUL HERE
@@ -139,7 +139,7 @@ class NotificationBot(BotPlugin):
         moon = c.execute('select itemName from mapDenormalize where itemID={0}'.format(pos[id]['moonID']))
         moon = moon.fetchone()[0]
         message = 'THE TOWER AT %s NEEDS FUELS PLS - %d remaining' % (moon, pos[id]['- quantity'])
-        self.send('logistics@j4lp.com', message, message_type='groupchat')
+        self.send('logistics@conference.j4lp.com', message, message_type='groupchat')
 
     def stationservicealert(self, id, toon):
         #<![CDATA[aggressorCorpID: null aggressorID: null shieldValue: 0.9989018188158935 solarSystemID: 30004776 stationID: 61000414 typeID: 28166]]>
@@ -286,8 +286,6 @@ class NotificationBot(BotPlugin):
             notes = char.notifications()
 
             toon.cachetimer = notes.expires
-
-            print('doing notes for {}'.format(toon.name))
 
             for notificationID in notes[0]:
                 timesent = notes[0][notificationID]['timestamp']
