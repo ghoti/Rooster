@@ -1,0 +1,9 @@
+[Core]
+Name = Smiles
+Module = smiles
+
+[Documentation]
+Description = herpaderpa
+
+[Python]
+Version=3
