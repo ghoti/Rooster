@@ -1,6 +1,7 @@
 __author__ = 'ghoti'
 from errbot import BotPlugin, botcmd
 import arrow
+import logging
 import configparser
 import datetime
 import os
@@ -63,12 +64,14 @@ class NotificationBot(BotPlugin):
             }
 
     def bounty(self, id, toon):
+        logging.info("Bounty Message Called")
         bounty = self.gettext(id, toon)
         name = self.getname(bounty[id]['victimID'])
         message = 'A bounty on {0} was claimed!'.format(name[0])
         self.send('logistics@conference.j4lp.com', message, message_type='groupchat')
 
     def application(self, id, toon):
+        logging.info("Application Message Called")
         app = self.gettext(id, toon)
         name = self.getname(app[id]['charID'])
         text = app[id]['applicationText'].strip()
@@ -88,6 +91,7 @@ class NotificationBot(BotPlugin):
         message = 'Someone was accepted into fweddit!'
 
     def anchoralert(self, id, toon):
+        logging.info("Anchor alert")
         anchor = self.gettext(id, toon)
         conn = sqlite3.connect('static.db')
         c = conn.cursor()
@@ -101,6 +105,7 @@ class NotificationBot(BotPlugin):
         self.send('leadership@conference.j4lp.com', message, message_type="groupchat")
 
     def vulnstruct(self, id, toon):
+        logging.info("Structure Vulnerable Warning")
         #allianceID: 99002172 corpID: 98114328 solarSystemID: 30004774
         # system vuln from sbu?
         vuln = self.gettext(id, toon)
@@ -111,10 +116,12 @@ class NotificationBot(BotPlugin):
         self.send('leadership@conference.j4lp.com', message, message_type="groupchat")
 
     def invulnstruct(self, id, toon):
+        logging.info("Structure Invulnerable Warning")
         message = 'Something went invulnerable in our sov!'
         self.send('leadership@conference.j4lp.com', message, message_type="groupchat")
 
     def sbualert(self, id, toon):
+        logging.info("SBU Alert")
         #allianceID: 99002172 corpID: 98114328 solarSystemID: 30004775
         sbu = self.gettext(id, toon)
         conn = sqlite3.connect('static.db')
@@ -132,6 +139,7 @@ class NotificationBot(BotPlugin):
         self.send('leadership@conference.j4lp.com', message, message_type="groupchat")
 
     def posfuel(self, id, toon):
+        logging.info("Fuel Alert")
         #I HAS NO IDEA WHAT INFO IS USEFUL HERE
         pos = self.gettext(id, toon)
         conn = sqlite3.connect('static.db')
@@ -142,11 +150,13 @@ class NotificationBot(BotPlugin):
         self.send('logistics@conference.j4lp.com', message, message_type='groupchat')
 
     def stationservicealert(self, id, toon):
+        logging.info("Station Service Alert")
         #<![CDATA[aggressorCorpID: null aggressorID: null shieldValue: 0.9989018188158935 solarSystemID: 30004776 stationID: 61000414 typeID: 28166]]>
         message = 'A Station Service is Under Attack!'
         self.send('leadership@conference.j4lp.com', message, message_type="groupchat")
 
     def toweralert(self, id, toon):
+        logging.info("Tower Attack Alert")
         #aggressorAllianceID: 99001635 aggressorCorpID: 805828589 aggressorID: 90103336 armorValue: 1.0 hullValue: 1.0 moonID: 40171366 shieldValue: 0.9999959798917017 solarSystemID: 30002693 typeID: 20065
         pos = self.gettext(id, toon)
         conn = sqlite3.connect('static.db')
@@ -164,6 +174,7 @@ class NotificationBot(BotPlugin):
         self.send('leadership@conference.j4lp.com', message, message_type='groupchat')
 
     def tcualert(self, id, toon):
+        logging.info("TCU Alert")
         sbu = self.gettext(id, toon)
         conn = sqlite3.connect('static.db')
         c = conn.cursor()
@@ -180,6 +191,7 @@ class NotificationBot(BotPlugin):
         self.send('leadership@conference.j4lp.com', message, message_type="groupchat")
 
     def sbushot(self, id, toon):
+        logging.info("SBU Shot Alert")
         #aggressorAllianceID: 99002172 aggressorCorpID: 98114328 aggressorID: 92014786 armorValue: 1.0 hullValue: 1.0 shieldValue: 0.9999877498283185 solarSystemID: 30004774
         sbu = self.gettext(id, toon)
         conn = sqlite3.connect('static.db')
@@ -197,6 +209,7 @@ class NotificationBot(BotPlugin):
         self.send('leadership@conference.j4lp.com', message, message_type="groupchat")
 
     def ihubalert(self, id, toon):
+        logging.info("IHUB alert")
         #aggressorAllianceID: 99003550 aggressorCorpID: 98285822 aggressorID: 94377267 armorValue: 1.0 hullValue: 1.0 shieldValue: 0.999993179392 solarSystemID: 30004777
         #aggressorAllianceID: 99002172 aggressorCorpID: 98114328 aggressorID: 92014786 armorValue: 1.0 hullValue: 1.0 shieldValue: 0.9999877498283185 solarSystemID: 30004774
         sbu = self.gettext(id, toon)
@@ -215,6 +228,7 @@ class NotificationBot(BotPlugin):
         self.send("leadership@conference.j4lp.com", message, message_type="groupchat")
 
     def pocoalert(self, id, toon):
+        logging.info("POCO Alert")
         #aggressorAllianceID: 99002172 aggressorCorpID: 98114328 aggressorID: 420385569 planetID: 40171284 planetTypeID: 2016 shieldLevel: 0.18022909510808988 solarSystemID: 30002693 typeID: 2233
         poco = self.gettext(id, toon)
         aggressor = self.getname(poco[id]['aggressorID'])
@@ -226,18 +240,22 @@ class NotificationBot(BotPlugin):
         self.send('leadership@conference.j4lp.com', message, message_type="groupchat")
 
     def pocorf(self, id, toon):
+        logging.info("POCO RF Alert")
         message = 'Someone reinforced a POCO we own!'
         self.send('leadership@conference.j4lp.com', message, message_type="groupchat")
 
     def fwwarn(self, id, toon):
+        logging.info("FW Warning")
         message = 'We are in danger of being kicked from FW!'
         self.send('leadership@conference.j4lp.com', message, message_type="groupchat")
 
     def fwkick(self, id, toon):
+        logging.info("FW Kicked")
         message = 'We have been kicked from FW! RIP!'
         self.send('leadership@conference.j4lp.com', message, message_type="groupchat")
 
     def joinfweddit(self, id, toon):
+        logging.info("Join Corp")
         app = self.gettext(id, toon)
         name = self.getname(app[id]['charID'])
         corp = self.getcorp(toon, app[id]['corpID'])
