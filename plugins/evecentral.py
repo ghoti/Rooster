@@ -7,7 +7,7 @@ import sqlite3
 import xml.etree.ElementTree as ET
 
 
-EVESTATICDATADUMP = os.getcwd() + '\static.db'
+EVESTATICDATADUMP = os.getcwd() + '/static.db'
 
 #currently defaults to jita, but someday might include a search feature for other regions
 #EVECENTRAL = "http://api.eve-central.com/api/marketstat?typeid={0}&minQ=1&&regionlimit=10000002"

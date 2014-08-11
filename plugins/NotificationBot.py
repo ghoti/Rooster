@@ -11,6 +11,8 @@ import evelink.eve
 import evelink.api
 import evelink.map
 
+EVESTATICDATADUMP = os.getcwd() + '/static.db'
+
 class NotificationBot(BotPlugin):
 
     class Character(object):
@@ -93,7 +95,7 @@ class NotificationBot(BotPlugin):
     def anchoralert(self, id, toon):
         logging.info("Anchor alert")
         anchor = self.gettext(id, toon)
-        conn = sqlite3.connect('static.db')
+        conn = sqlite3.connect(EVESTATICDATADUMP)
         c = conn.cursor()
         moon = c.execute('select itemName from mapDenormalize where itemID={0}'.format(anchor[id]['moonID']))
         moon = moon.fetchone()[0]
@@ -124,7 +126,7 @@ class NotificationBot(BotPlugin):
         logging.info("SBU Alert")
         #allianceID: 99002172 corpID: 98114328 solarSystemID: 30004775
         sbu = self.gettext(id, toon)
-        conn = sqlite3.connect('static.db')
+        conn = sqlite3.connect(EVESTATICDATADUMP)
         c = conn.cursor()
         system = c.execute('select itemName from mapDenormalize where itemID={0}'.format(sbu[id]['solarSystemID']))
         system = system.fetchone()[0]
@@ -142,7 +144,7 @@ class NotificationBot(BotPlugin):
         logging.info("Fuel Alert")
         #I HAS NO IDEA WHAT INFO IS USEFUL HERE
         pos = self.gettext(id, toon)
-        conn = sqlite3.connect('static.db')
+        conn = sqlite3.connect(EVESTATICDATADUMP)
         c = conn.cursor()
         moon = c.execute('select itemName from mapDenormalize where itemID={0}'.format(pos[id]['moonID']))
         moon = moon.fetchone()[0]
@@ -159,7 +161,7 @@ class NotificationBot(BotPlugin):
         logging.info("Tower Attack Alert")
         #aggressorAllianceID: 99001635 aggressorCorpID: 805828589 aggressorID: 90103336 armorValue: 1.0 hullValue: 1.0 moonID: 40171366 shieldValue: 0.9999959798917017 solarSystemID: 30002693 typeID: 20065
         pos = self.gettext(id, toon)
-        conn = sqlite3.connect('static.db')
+        conn = sqlite3.connect(EVESTATICDATADUMP)
         c = conn.cursor()
         moon = c.execute('select itemName from mapDenormalize where itemID={0}'.format(pos[id]['moonID']))
         moon = moon.fetchone()[0]
@@ -176,7 +178,7 @@ class NotificationBot(BotPlugin):
     def tcualert(self, id, toon):
         logging.info("TCU Alert")
         sbu = self.gettext(id, toon)
-        conn = sqlite3.connect('static.db')
+        conn = sqlite3.connect(EVESTATICDATADUMP)
         c = conn.cursor()
         system = c.execute('select itemName from mapDenormalize where itemID={0}'.format(sbu[id]['solarSystemID']))
         system = system.fetchone()[0]
@@ -194,7 +196,7 @@ class NotificationBot(BotPlugin):
         logging.info("SBU Shot Alert")
         #aggressorAllianceID: 99002172 aggressorCorpID: 98114328 aggressorID: 92014786 armorValue: 1.0 hullValue: 1.0 shieldValue: 0.9999877498283185 solarSystemID: 30004774
         sbu = self.gettext(id, toon)
-        conn = sqlite3.connect('static.db')
+        conn = sqlite3.connect(EVESTATICDATADUMP)
         c = conn.cursor()
         system = c.execute('select itemName from mapDenormalize where itemID={0}'.format(sbu[id]['solarSystemID']))
         system = system.fetchone()[0]
@@ -213,7 +215,7 @@ class NotificationBot(BotPlugin):
         #aggressorAllianceID: 99003550 aggressorCorpID: 98285822 aggressorID: 94377267 armorValue: 1.0 hullValue: 1.0 shieldValue: 0.999993179392 solarSystemID: 30004777
         #aggressorAllianceID: 99002172 aggressorCorpID: 98114328 aggressorID: 92014786 armorValue: 1.0 hullValue: 1.0 shieldValue: 0.9999877498283185 solarSystemID: 30004774
         sbu = self.gettext(id, toon)
-        conn = sqlite3.connect('static.db')
+        conn = sqlite3.connect(EVESTATICDATADUMP)
         c = conn.cursor()
         system = c.execute('select itemName from mapDenormalize where itemID={0}'.format(sbu[id]['solarSystemID']))
         system = system.fetchone()[0]
@@ -232,7 +234,7 @@ class NotificationBot(BotPlugin):
         #aggressorAllianceID: 99002172 aggressorCorpID: 98114328 aggressorID: 420385569 planetID: 40171284 planetTypeID: 2016 shieldLevel: 0.18022909510808988 solarSystemID: 30002693 typeID: 2233
         poco = self.gettext(id, toon)
         aggressor = self.getname(poco[id]['aggressorID'])
-        conn = sqlite3.connect('static.db')
+        conn = sqlite3.connect(EVESTATICDATADUMP)
         c = conn.cursor()
         planet = c.execute('select itemName from mapDenormalize where itemID={0}'.format(poco[id]['planetID']))
         planet = planet.fetchone()[0]

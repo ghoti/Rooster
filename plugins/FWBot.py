@@ -5,7 +5,7 @@ import evelink.map
 import os
 import sqlite3
 
-EVESTATICDATADUMP = os.getcwd() + '\static.db'
+EVESTATICDATADUMP = os.getcwd() + '/static.db'
 
 
 class FWBot(BotPlugin):
