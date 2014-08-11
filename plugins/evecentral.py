@@ -42,9 +42,9 @@ class EveCentral(BotPlugin):
 
     @staticmethod
     def get_type_id(self, name):
-        if os.path.isfile(os.path.expanduser(EVESTATICDATADUMP)):
+        try:
             conn = sqlite3.connect(EVESTATICDATADUMP)
-        else:
+        except:
             return "Something terrible has happened to my database!"
         try:
             c = conn.cursor()

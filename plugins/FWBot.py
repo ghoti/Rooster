@@ -18,9 +18,9 @@ class FWBot(BotPlugin):
             return "Should I guess the system for you...?"
         api = evelink.map.Map()
         flist = api.faction_warfare_systems()
-        if os.path.isfile(os.path.expanduser(EVESTATICDATADUMP)):
+        try: #os.path.isfile(os.path.expanduser(EVESTATICDATADUMP)):
             conn = sqlite3.connect(EVESTATICDATADUMP)
-        else:
+        except:
             conn = None
             return "Error in db?!"
         try:
