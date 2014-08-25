@@ -21,6 +21,7 @@ class Trello(BotPlugin):
 
         if not args[0]:
             yield "Required argument list not given"
+            return
 
         config = configparser.ConfigParser()
         config.read_file(open('config/trello.cfg'))
