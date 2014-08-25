@@ -1,0 +1,9 @@
+[Core]
+Name = Trello
+Module = TrelloBot
+
+[Documentation]
+Description = Get active cards from list
+
+[Python]
+Version=3
