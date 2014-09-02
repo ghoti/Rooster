@@ -150,7 +150,7 @@ class NotificationBot(BotPlugin):
         moon = c.execute('select itemName from mapDenormalize where itemID={0}'.format(pos[id]['moonID']))
         moon = moon.fetchone()[0]
         corp = self.getcorp(toon, pos[id]['corpID'])
-        fuel = c.execute('select itemName from invTypes where typeID = {}'.format(pos[id]['typeID']))
+        fuel = c.execute('select typeName from invTypes where typeID={}'.format(pos[id]['typeID']))
         fuel = fuel.fetchone()[0]
         #message = 'THE TOWER AT %s NEEDS FUELS PLS - %d remaining' % (moon, pos[id]['- quantity'])
         message = 'FUEL ALERT: {}: {} has {} {} FUEL REMAINING'.format(corp, moon, pos[id]['- quantity'], fuel)
