@@ -141,6 +141,7 @@ class NotificationBot(BotPlugin):
         self.send('leadership@conference.j4lp.com', message, message_type="groupchat")
 
     def posfuel(self, id, toon):
+        #allianceID: 99002172 corpID: 98114328 moonID: 40302497 solarSystemID: 30004776 typeID: 20063 wants: - quantity: 189 typeID: 4312
         logging.info("Fuel Alert")
         #I HAS NO IDEA WHAT INFO IS USEFUL HERE
         pos = self.gettext(id, toon)
@@ -148,7 +149,11 @@ class NotificationBot(BotPlugin):
         c = conn.cursor()
         moon = c.execute('select itemName from mapDenormalize where itemID={0}'.format(pos[id]['moonID']))
         moon = moon.fetchone()[0]
-        message = 'THE TOWER AT %s NEEDS FUELS PLS - %d remaining' % (moon, pos[id]['- quantity'])
+        corp = self.getcorp(toon, pos[id]['corpID'])
+        fuel = c.execute('select itemName from invTypes where typeID = {}'.format(pos[id]['typeID']))
+        fuel = fuel.fetchone()[0]
+        #message = 'THE TOWER AT %s NEEDS FUELS PLS - %d remaining' % (moon, pos[id]['- quantity'])
+        message = 'FUEL ALERT: {}: {} has {} {} FUEL REMAINING'.format(corp, moon, pos[id]['- quantity'], fuel)
         self.send('logistics@conference.j4lp.com', message, message_type='groupchat')
 
     def stationservicealert(self, id, toon):
@@ -173,7 +178,11 @@ class NotificationBot(BotPlugin):
         except:
             alliance = None
         message = 'The POS ({0}) at {1} was shot by {2}/{3}/{4}!'.format(what, moon, who[0], corp, alliance)
+        message2 = 'Current HP status (S/A/H): {0:.0f}%/{0:.0f}%/{0:.0f}%'.format(float(pos[id]['shieldValue'])*100,
+                                                                                  float(pos[id]['armorValue'])*100,
+                                                                                  float(pos[id]['hullValue'])*100)
         self.send('leadership@conference.j4lp.com', message, message_type='groupchat')
+        self.send('leadership@conference.j4lp.com', message2, message_type='groupchat')
 
     def tcualert(self, id, toon):
         logging.info("TCU Alert")
