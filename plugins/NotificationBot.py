@@ -153,7 +153,7 @@ class NotificationBot(BotPlugin):
         fuel = c.execute('select typeName from invTypes where typeID={}'.format(pos[id]['typeID']))
         fuel = fuel.fetchone()[0]
         #message = 'THE TOWER AT %s NEEDS FUELS PLS - %d remaining' % (moon, pos[id]['- quantity'])
-        message = 'FUEL ALERT: {}: {} has {} {} FUEL REMAINING'.format(corp, moon, pos[id]['- quantity'], fuel)
+        message = 'FUEL ALERT: {}: {} has {} {} Remaining!'.format(corp, moon, pos[id]['- quantity'], fuel)
         self.send('logistics@conference.j4lp.com', message, message_type='groupchat')
 
     def stationservicealert(self, id, toon):
@@ -298,6 +298,7 @@ class NotificationBot(BotPlugin):
     def getalliancefromid(self, toon, id):
         alliance = evelink.eve.EVE()
         return alliance.alliances
+    
 
     def runner(self):
         eve = evelink.eve.EVE()
