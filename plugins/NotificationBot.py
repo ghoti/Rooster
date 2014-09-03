@@ -178,7 +178,7 @@ class NotificationBot(BotPlugin):
         except:
             alliance = None
         message = 'The POS ({0}) at {1} was shot by {2}/{3}/{4}!'.format(what, moon, who[0], corp, alliance)
-        message2 = 'Current HP status (S/A/H): {0:.0f}%/{0:.0f}%/{0:.0f}%'.format(float(pos[id]['shieldValue'])*100,
+        message2 = 'Current HP status (S/A/H): {0:.0f}%/{1:.0f}%/{2:.0f}%'.format(float(pos[id]['shieldValue'])*100,
                                                                                   float(pos[id]['armorValue'])*100,
                                                                                   float(pos[id]['hullValue'])*100)
         self.send('leadership@conference.j4lp.com', message, message_type='groupchat')
@@ -298,7 +298,7 @@ class NotificationBot(BotPlugin):
     def getalliancefromid(self, toon, id):
         alliance = evelink.eve.EVE()
         return alliance.alliances
-    
+
 
     def runner(self):
         eve = evelink.eve.EVE()
