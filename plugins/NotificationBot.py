@@ -105,6 +105,7 @@ class NotificationBot(BotPlugin):
         who = self.getalliancefromid(toon, anchor[id]['allianceID'])
         message = '{0} was anchored on {1} by {2}!'.format(thing, moon, who)
         self.send('leadership@conference.j4lp.com', message, message_type="groupchat")
+        self.send('bootcamp@conference.j4lp.com', message, message_type="groupchat")
 
     def vulnstruct(self, id, toon):
         logging.info("Structure Vulnerable Warning")
@@ -183,6 +184,8 @@ class NotificationBot(BotPlugin):
                                                                                   float(pos[id]['hullValue'])*100)
         self.send('leadership@conference.j4lp.com', message, message_type='groupchat')
         self.send('leadership@conference.j4lp.com', message2, message_type='groupchat')
+        self.send('bootcamp@conference.j4lp.com', message, message_type='groupchat')
+        self.send('bootcamp@conference.j4lp.com', message2, message_type='groupchat')
 
     def tcualert(self, id, toon):
         logging.info("TCU Alert")
@@ -200,6 +203,7 @@ class NotificationBot(BotPlugin):
             alliance = None
         message = 'The TCU at {0} was shot by {1}/{2}/{3}!'.format(system, who[0], corp, alliance)
         self.send('leadership@conference.j4lp.com', message, message_type="groupchat")
+        self.send('bootcamp@conference.j4lp.com', message, message_type="groupchat")
 
     def sbushot(self, id, toon):
         logging.info("SBU Shot Alert")
@@ -218,6 +222,7 @@ class NotificationBot(BotPlugin):
             alliance = None
         message = 'An SBU at {0} was shot by {1}/{2}/{3}!'.format(system, who[0], corp, alliance)
         self.send('leadership@conference.j4lp.com', message, message_type="groupchat")
+        self.send('bootcamp@conference.j4lp.com', message, message_type="groupchat")
 
     def ihubalert(self, id, toon):
         logging.info("IHUB alert")
@@ -237,6 +242,7 @@ class NotificationBot(BotPlugin):
             alliance = None
         message = 'The iHub at {0} was shot by {1}/{2}/{3}!'.format(system, who[0], corp, alliance)
         self.send("leadership@conference.j4lp.com", message, message_type="groupchat")
+        self.send("bootcamp@conference.j4lp.com", message, message_type="groupchat")
 
     def pocoalert(self, id, toon):
         logging.info("POCO Alert")
@@ -249,11 +255,13 @@ class NotificationBot(BotPlugin):
         planet = planet.fetchone()[0]
         message = '{0} has shot the POCO we own sitting on {1}!'.format(aggressor[0], planet)
         self.send('leadership@conference.j4lp.com', message, message_type="groupchat")
+        self.send('bootcamp@conference.j4lp.com', message, message_type="groupchat")
 
     def pocorf(self, id, toon):
         logging.info("POCO RF Alert")
         message = 'Someone reinforced a POCO we own!'
         self.send('leadership@conference.j4lp.com', message, message_type="groupchat")
+        self.send('bootcamp@conference.j4lp.com', message, message_type="groupchat")
 
     def fwwarn(self, id, toon):
         logging.info("FW Warning")
