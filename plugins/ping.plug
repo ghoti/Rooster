@@ -1,0 +1,9 @@
+[Core]
+Name = pingbot
+Module = ping
+
+[Documentation]
+Description = Grab the attention of a pinger to ping a ping something pingworthy
+
+[Python]
+Version=3
