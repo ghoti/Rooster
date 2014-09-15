@@ -1,9 +1,9 @@
 [Core]
-Name = pingbot
+Name = Ping
 Module = ping
-
+    
 [Documentation]
-Description = Grab the attention of a pinger to ping a ping something pingworthy
+Description = Err Bot plugin to ping groups of people
 
 [Python]
 Version=3

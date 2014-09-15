@@ -1,12 +1,44 @@
-__author__ = 'ghoti'
 from errbot import BotPlugin, botcmd
+#!from errbot.builtins.webserver import webhook
 
-class PingBot(BotPlugin):
-    """Grab the attention of a pingable member in Bootcamp"""
-    @botcmd
+
+class Ping(BotPlugin):
+
+    """A Ping Group function for Err"""
+    min_err_version = '1.6.0'  # Optional, but recommended
+    #max_err_version = '3.0.0'  # Optional, but recommended
+
+    groups = {}
+
+    @botcmd(split_args_with="||")
+    def ping_set(self, mess, args):
+
+        group_str = args[0]
+        group_tuple = group_str.split(" ", 1)
+        
+        if len(group_tuple) > 1:
+            group, text = group_tuple
+            self.groups[group] = text
+            return "Updated group."
+        else:
+            group = group_tuple[0]
+            if group in self.groups:
+                del self.groups[group]
+                return "Deleted group %s" % group
+        
+        
+        
+        
+    @botcmd(split_args_with=None)
     def ping(self, mess, args):
-        yield "A ping is being requested!"
-        #hardcoding the shit out of this for now, plans include pulling ldap info from j4lp.com and roster list
-        #from room to avoid clutter and such  gross
-        yield "rina_kondur chainsaw_mcginny otsdarva_iv tactically_superior_avacado tujiko_noriko"
-        yield "bowervvick_wowbagger impeh_man fenrir_vice vadrin_hegirin alistair_croup inspector_gair"
+        
+        if not args:
+            return "No group to ping."
+        group = args[0]
+        
+        group_text = self.groups.get(group, None)
+        
+        if group_text is not None:
+            return group_text
+        else:
+            return "No such group"
