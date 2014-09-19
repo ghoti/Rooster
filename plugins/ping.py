@@ -35,6 +35,9 @@ class Ping(BotPlugin):
     @botcmd(split_args_with=None)
     def ping(self, mess, args):
         """Ping a specified group"""
+
+        if not args[0]:
+            return "No Group to Ping, valid groups are {}".format(", ".join(sorted(self.keys())),)
         
         group = str(args[0])
         group = group.lower()
