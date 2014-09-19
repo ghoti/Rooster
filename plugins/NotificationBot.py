@@ -54,6 +54,7 @@ class NotificationBot(BotPlugin):
                 75:self.toweralert,
                 76:self.posfuel,
                 77:self.stationservicealert,
+                80:self.stationagress,
                 86:self.tcualert,
                 87:self.sbushot,
                 88:self.ihubalert,
@@ -156,6 +157,10 @@ class NotificationBot(BotPlugin):
         #message = 'THE TOWER AT %s NEEDS FUELS PLS - %d remaining' % (moon, pos[id]['- quantity'])
         message = 'FUEL ALERT: {}: {} has {} {} Remaining!'.format(corp, moon, pos[id]['- quantity'], fuel)
         self.send('logistics@conference.j4lp.com', message, message_type='groupchat')
+
+    def stationagress(self, id, toon):
+        message = 'One of our stations is under attack!'
+        self.send('leadership@conference.j4lp.com', message, message_type='groupchat')
 
     def stationservicealert(self, id, toon):
         logging.info("Station Service Alert")
