@@ -1,0 +1,9 @@
+[Core]
+Name = Zkillwatch
+Module = zkillwatch
+
+[Documentation]
+Description = throwup stats on a zkill link mentioned in chat
+
+[Python]
+Version=3
