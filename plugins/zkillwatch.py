@@ -31,9 +31,13 @@ class ZkillWatch(BotPlugin):
             if int(attacker['finalBlow']):
                 killer = attacker['characterName']
                 killeralliance = attacker['allianceName']
-        strValue = kill[0]["zkb"]["totalValue"]
-        value = round(float(strValue))
-        value = humanize.intword(value)
+        #sometimes zkill doesnt give us a value, odd
+        try:
+            strValue = kill[0]["zkb"]["totalValue"]
+            value = round(float(strValue))
+            value = humanize.intword(value)
+        except KeyError:
+            value = '???'
         self.send(mess.getFrom(), "Victim: {}({})".format(victim, victimalliance), message_type=mess.getType())
         self.send(mess.getFrom(), "Killing Blow: {}({}) ({} other pilot(s) involved)".format(
             killer, killeralliance, attackers-1), message_type=mess.getType())
