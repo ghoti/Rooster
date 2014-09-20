@@ -44,7 +44,7 @@ class ZkillWatch(BotPlugin):
         killmail_id = set(killmail_id for killmail_id in re.findall(kill_pattern, str(mess)))
         for kill in killmail_id:
             if kill in self["kills"].keys():
-                self.send(mess.getFrom(), "REPOST ALERT", message_type=mess.getType())
+                self.send(mess.getFrom(), "REPOST ALERT - SOMEONE ALREADY POSTED THIS KILL SCRUB", message_type=mess.getType())
             else:
                 seenkills = self["kills"]
                 seenkills[kill] = kill
