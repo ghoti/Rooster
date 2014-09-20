@@ -120,6 +120,8 @@ shipTypes = {
     32989:"Vherokior Probe",
     33190:"Tash-Murkon Magnate",
     33468:"Astero",
+    33475:"Mobile Tractor Unit",
+    33477:"Mobile Siphon Unit",
     33655:"Punisher Kador Edition",
     33657:"Punisher Tash-Murkon Edition",
     33659:"Merlin Nugoeihuvi Edition",
