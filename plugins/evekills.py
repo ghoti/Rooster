@@ -74,6 +74,9 @@ class EveKills(BotPlugin):
 
         if kill['victim']['allianceID'] in userids:
             return self['users'][kill['victim']['allianceID']]
+        for attacker in kill['attackers']:
+            if attacker['allianceID'] in userids:
+                return self['users'][attacker['allianceID']]
         return None
 
     def on_message(self, headers, message):
@@ -94,7 +97,7 @@ class EveKills(BotPlugin):
             self["stats"] = stats
             return  # Killmail didn't have anyone we care about on it
 
-        victimId = int(kill["victim"]["characterID"])
+        victimId = int(kill["victim"]["allianceID"])
         loss = victimId in self["users"].keys()
         if loss:  # For the !kill stats command...
             stats["lost"] += 1
