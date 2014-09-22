@@ -1,8 +1,10 @@
 __author__ = 'ghoti'
+from errbot import BotPlugin
+
 import humanize
+import logging
 import re
 import requests
-from errbot import BotPlugin
 
 kill_pattern = r"https?:\/\/(?:www.)?zkillboard.com\/kill\/([0-9]+)\/*"
 kill_pattern = re.compile(kill_pattern)
@@ -13,11 +15,13 @@ class ZkillWatch(BotPlugin):
         super(ZkillWatch, self).activate()
         if not "kills" in self:
             self["kills"] = {}
+        logging.debug('bot is alive and shelf is active')
 
     @staticmethod
     def ship_name(itemId):
         if itemId in shipTypes:
             return shipTypes[itemId]
+        logging.debug('ship {} not found in my list please add'.format(itemId))
         return "???"
 
     def zkill(self, killid, mess):
@@ -47,6 +51,7 @@ class ZkillWatch(BotPlugin):
         #WHY THE FUCK DO I HAVE TO CAST THAT AS A STRING
         killmail_id = set(killmail_id for killmail_id in re.findall(kill_pattern, str(mess)))
         for kill in killmail_id:
+            logging.debug('Caught a zkill link, doing magic')
             if kill in self["kills"].keys():
                 self.send(mess.getFrom(), "REPOST ALERT - SOMEONE ALREADY POSTED THIS KILL SCRUB", message_type=mess.getType())
             else:
