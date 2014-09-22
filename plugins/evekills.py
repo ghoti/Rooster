@@ -12,6 +12,7 @@ import humanize
 
 import traceback
 import sys
+import time
 import stomp
 import logging
 
@@ -50,13 +51,12 @@ class EveKills(BotPlugin):
         self.conn.set_listener('', self)          
         self.conn.start()
         self.conn.connect(username="guest", passcode="guest")
-        self.conn.subscribe(destination="/topic/kills", id=1, ack='auto')
+        #self.conn.subscribe(destination="/topic/kills", id=1, ack='auto')
         # I get errors after the 15th subscribe, I think the stomp server limits us
         # so I'll listen to all kills instead.
-        # for userid in self["users"].keys():
-        #     print "/topic/involved.character.%d" % userid
-        #     self.conn.subscribe(destination="/topic/involved.character.%d", id=1, ack='auto')
-
+        if 'users' in self:
+            for userid in self["users"].keys():
+                self.conn.subscribe(destination="/topic/involved.alliance.%d" % userid, id=userid, ack='auto')
 
     def on_error(self, headers, message):
         # STOMP error
@@ -92,10 +92,11 @@ class EveKills(BotPlugin):
             return  # we've already seen this killmail, ignore it.
         self.seen.append(killId)
 
-        guy = self._our_guys(kill)
-        if guy is None:
-            self["stats"] = stats
-            return  # Killmail didn't have anyone we care about on it
+        #no need to check, we are subscribed to alliance events
+        #guy = self._our_guys(kill)
+        #if guy is None:
+        #    self["stats"] = stats
+        #    return  # Killmail didn't have anyone we care about on it
 
         victimId = int(kill["victim"]["allianceID"])
         loss = victimId in self["users"].keys()
@@ -104,7 +105,7 @@ class EveKills(BotPlugin):
         else:
             stats["killed"] += 1
 
-        formattedKill = self._format_kill(kill, loss, guy)
+        formattedKill = self._format_kill(kill, loss)
 
         self.send(self["channel"], formattedKill, message_type="groupchat") # Announce it!
         self["stats"] = stats  # Save our new stats to the shelf
@@ -126,7 +127,7 @@ class EveKills(BotPlugin):
         try:
             id = api.character_id_from_name(name=name)[0]
         except Exception:
-            raise Exception("Character not found")
+            raise Exception("Alliance not found")
         return id
 
     @staticmethod
@@ -146,7 +147,7 @@ class EveKills(BotPlugin):
             print(traceback.format_exc())
             return "???"
 
-    def _format_kill(self, kill, loss, guy):
+    def _format_kill(self, kill, loss):
         """ Format the kill JSON into a nice string we can output"""        
         verb = "LOSS" if loss else "KILL"
         ship = self._ship_name(int(kill["victim"]["shipTypeID"]))
@@ -190,8 +191,10 @@ class EveKills(BotPlugin):
             users = self["users"]
             users[characterId] = args
             self["users"] = users
-            
+            if "conn" in self:
+                self.conn.subscribe(destination="/topic/involved.alliance.%d" % characterId, id=characterId, ack='auto')
             return "Added %s/%d" % (characterName, characterId)
+
         except Exception as e:
             return "Couldn't add you to the kill watchlist - %s" % e.message
 
