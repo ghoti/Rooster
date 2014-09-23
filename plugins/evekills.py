@@ -1,5 +1,3 @@
-from errbot import BotPlugin, botcmd
-from errbot.builtins.webserver import webhook
 from datetime import datetime
 #from lxml import etree
 from xml import etree
@@ -20,6 +18,7 @@ logging.basicConfig()
 logging.getLogger("stomp.py").setLevel(logging.WARNING)
 
 from errbot import botcmd, BotPlugin, PY2
+from errbot.templating import tenv
 
 if PY2:
     from urllib2 import urlopen, quote, Request
@@ -79,6 +78,7 @@ class EveKills(BotPlugin):
                 return self['users'][attacker['allianceID']]
         return None
 
+
     def on_message(self, headers, message):
         # STOMP message                      
         kills = []
@@ -107,7 +107,8 @@ class EveKills(BotPlugin):
 
         formattedKill = self._format_kill(kill, loss)
 
-        self.send(self["channel"], formattedKill, message_type="groupchat") # Announce it!
+        #self.send(self["channel"], formattedKill, message_type="groupchat") # Announce it!
+        self.send(self['channel'], formattedKill, message_type='groupchat')
         self["stats"] = stats  # Save our new stats to the shelf
 
 
@@ -153,14 +154,18 @@ class EveKills(BotPlugin):
         ship = self._ship_name(int(kill["victim"]["shipTypeID"]))
         url = "https://zkillboard.com/kill/%s/" % kill["killID"]
         value = self._value(kill)        
-        return "%s | %s (%s) | %s | %s isk | %s" % \
-            (verb, 
-             kill["victim"]["characterName"], 
-             kill["victim"]["allianceName"],
-             ship,
-             value,
-             url
-            )
+        #return "%s | %s (%s) | %s | %s isk | %s" % \
+        #    (verb,
+        #     kill["victim"]["characterName"],
+        #     kill["victim"]["allianceName"],
+        #     ship,
+        #     value,
+        #     url
+        #    )
+        response = tenv().get_template('killmail.html').render(loss=loss, name=kill['victim']['characterName'],
+                                                               alliance=kill['victim']['allianceName'], ship=ship,
+                                                               value=value, link=url)
+        return response
     
     @botcmd(template="stats")
     def kill_stats(self, mess, args):
@@ -222,6 +227,7 @@ class EveKills(BotPlugin):
 
         if characterId in self["users"]:
             del self["users"][characterId]
+            self.resetStomp()
             return "Done."
         else:
             return "Couldn't find that person."
