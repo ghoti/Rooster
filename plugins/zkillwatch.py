@@ -4,8 +4,10 @@ from errbot import BotPlugin
 import csv
 import humanize
 import logging
+import os
 import re
 import requests
+import sys
 
 kill_pattern = r"https?:\/\/(?:www.)?zkillboard.com\/kill\/([0-9]+)\/*"
 kill_pattern = re.compile(kill_pattern)
@@ -13,7 +15,7 @@ ZKILL = 'https://zkillboard.com/api/kills/killID/{}/'
 
 import csv
 invtypes = {}
-with open('invTypes.csv') as f:
+with open(os.path.dirname(os.path.abspath(sys.argv[0])) + '/invTypes.csv', 'r') as f:
     invreader = csv.reader(f, delimiter=',', quotechar='"')
     for i in invreader:
         invtypes[i[0]] = i[1]
