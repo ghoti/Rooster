@@ -33,7 +33,7 @@ class ZkillWatch(BotPlugin):
         #return "???"
         try:
             ship = invtypes[itemId]
-        except KeyError
+        except KeyError:
             #this should never happen?
             ship = '???'
         return ship
