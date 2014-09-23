@@ -13,7 +13,6 @@ kill_pattern = r"https?:\/\/(?:www.)?zkillboard.com\/kill\/([0-9]+)\/*"
 kill_pattern = re.compile(kill_pattern)
 ZKILL = 'https://zkillboard.com/api/kills/killID/{}/'
 
-import csv
 invtypes = {}
 with open(os.path.dirname(os.path.abspath(sys.argv[0])) + '/invTypes.csv', 'r') as f:
     invreader = csv.reader(f, delimiter=',', quotechar='"')
@@ -34,7 +33,7 @@ class ZkillWatch(BotPlugin):
         #logging.debug('ship {} not found in my list please add'.format(itemId))
         #return "???"
         try:
-            ship = invtypes[itemId]
+            ship = invtypes[str(itemId)]
         except KeyError:
             #this should never happen?
             ship = '???'
