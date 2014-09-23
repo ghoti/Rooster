@@ -1,9 +1,9 @@
 {% extends "base.html" %}
 {% block body %}    
 <br/>
-<font style='font-weight:bold'>{{ event }}{{checks}}</font> Kills seen<br/>
-{{lost}} Ships Lost<br/>
-{{killed}} Ships Killed<br/>
+<strong>{{checks}}</strong> Kills seen<br/>
+<span style='color:red'>{{lost}} Ships Lost</span><br/>
+<span style='color:green'>{{killed}} Ships Killed</span><br/>
 {{errors}} Errors (grrr ZKillboard!)
 {% endblock %}
 

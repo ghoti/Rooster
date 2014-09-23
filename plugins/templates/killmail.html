@@ -1,9 +1,9 @@
 {% extends "base.html" %}
 {% block body %}
 {% if loss %}
-    <font style='font-weight:bold'>KILL</font> ||
+   <span style='color:green'><strong>KILL</strong></span> ||
 {% else %}
-    <font style='font-weight:bold'>LOSS</font> ||
+   <span style='color:red'><strong>LOSS</strong></span> ||
 {% endif %}
 {{ name }} ({{ alliance }}) | {{ ship }} | {{ value }} || {{ link }}
 {% endblock %}
