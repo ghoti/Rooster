@@ -151,7 +151,7 @@ class EveKills(BotPlugin):
     
     @botcmd(template="stats")
     def kill_stats(self, mess, args):
-        return self["stats"], self['value']
+        return self["stats"]
 
     @botcmd(split_args_with=None)
     def kill_reset(self, mess, args):
