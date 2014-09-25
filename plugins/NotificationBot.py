@@ -103,7 +103,7 @@ class NotificationBot(BotPlugin):
         thing = c.execute('select typeName from invTypes where typeID={0}'.format(anchor[id]['typeID']))
         thing = thing.fetchone()[0]
         #who = self.getcorp(toon, anchor[id]['corpID'])
-        who = self.getalliancefromid(toon, anchor[id]['allianceID'])
+        who = self.getalliance(toon, anchor[id]['allianceID'])
         message = '{0} was anchored on {1} by {2}!'.format(thing, moon, who)
         self.send('leadership@conference.j4lp.com', message, message_type="groupchat")
         self.send('bootcamp@conference.j4lp.com', message, message_type="groupchat")
@@ -306,7 +306,8 @@ class NotificationBot(BotPlugin):
     def getalliance(self, toon, char):
         #api = evelink.api.API(api_key=(toon.keyid, toon.vcode))
         alliance = evelink.eve.EVE()
-        return alliance.affiliations_for_character(char_id=char)[0]['alliance']['name']
+        #return alliance.affiliations_for_character(char_id=int(char))[0]['alliance']['name']
+        return alliance.affiliations_for_character(char_id=char)[0]['name']
 
     def getalliancefromid(self, toon, id):
         alliance = evelink.eve.EVE()
