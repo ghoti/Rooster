@@ -5,6 +5,8 @@ import evelink.api
 import evelink.eve
 
 import ago
+import arrow
+import datetime
 import json
 import humanize
 import csv
@@ -85,6 +87,13 @@ class EveKills(BotPlugin):
         if killId in self.seen:
             return  # we've already seen this killmail, ignore it.
         self.seen.append(killId)
+
+        #stomp decided today to go apeshit and show kills from 2 weeks ago, this should fix that
+        now = arrow.utcnow()
+        killtime = arrow.get(kill['killTime'])
+        length = now - killtime
+        if length > datetime.timedelta(hours=2):
+            return
 
         #no need to check, we are subscribed to alliance events
         #guy = self._our_guys(kill)
