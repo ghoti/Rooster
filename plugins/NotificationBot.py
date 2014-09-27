@@ -62,7 +62,7 @@ class NotificationBot(BotPlugin):
                 94:self.pocorf,
                 96:self.fwwarn,
                 97:self.fwkick,
-                111:self.bounty,
+                #111:self.bounty,
                 #128:self.joinfweddit #join note is same as app note with different id hue
             }
 
