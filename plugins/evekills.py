@@ -183,7 +183,7 @@ class EveKills(BotPlugin):
             characterName = " ".join(args)
             characterId = self._get_characer_id(characterName)
             
-            args = {'character_name': characterName, 'time': datetime.utcnow()}
+            args = {'character_name': characterName, 'time': datetime.datetime.utcnow()}
             users = self["users"]
             users[characterId] = args
             self["users"] = users
@@ -192,12 +192,12 @@ class EveKills(BotPlugin):
             return "Added %s/%d" % (characterName, characterId)
 
         except Exception as e:
-            return "Couldn't add you to the kill watchlist - %s" % e.message
+            return "Couldn't add you to the kill watchlist - %s" % e
 
     @botcmd(template="char_list")
     def kill_list(self, mess, args):
         """Show everyone who is on the watch list."""
-        now = datetime.utcnow()
+        now = datetime.datetime.utcnow()
         members = self["users"].values()
         members = sorted(members, key=lambda member: member['character_name'])
         for member in members:            
@@ -229,7 +229,7 @@ class EveKills(BotPlugin):
         try:
             characterId = self._get_characer_id(characterName)
         except Exception as e:
-            return "Something went wrong - %s" % e.message
+            return "Something went wrong - %s" % e
 
         if characterId in self["users"]:
             del self["users"][characterId]
