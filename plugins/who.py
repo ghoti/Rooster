@@ -1,95 +1,89 @@
-from __future__ import print_function
-
-from errbot import BotPlugin, botcmd
-import re
-import requests
-#import eveapi
+__author__ = 'ghoti'
+from errbot import botcmd, BotPlugin
 import evelink.eve
 import arrow
-from collections import defaultdict
+import requests
 
-
-#Relic of outdated irc version of this same module, maybe used someday for xhtml formatting in err so it stays.
-colours = defaultdict(str)
-colours.update({
-    "NORMAL": u"\u000f",
-    "RED": u"\u000304",
-    "GREEN": u"\u000309",
-    "YELLOW": u"\u000308",
-    "ORANGE": u"\u00037"
-})
-
-ZKBAPI = "https://zkillboard.com/api/stats/characterID/%s/"
-
-
-class Who(BotPlugin):
-    """Basic information on eve characters using killboard and evewho"""
-
+class EveWho(BotPlugin):
     @staticmethod
-    def formatsecstatus(data):
-        data = "%.2f" % data
-        value = float(data)
-        if value < -5:
-            return (colours["RED"], data)
-        if value < 0:
-            return (colours["ORANGE"], data)
-        if value <= 4:
-            return (colours["NORMAL"], data)
-        if value > 4:
-            return (colours["GREEN"], data)
-
-    @staticmethod
-    def getdetailshash(name):
+    def getid(name):
         api = evelink.eve.EVE()
-
-        r = api.character_id_from_name(name=name)
-        if r[0] is None:
-            r = api.character_id_from_name(name=name.title())
-        #assert(len(r) > 0)
-        id = r[0]
-        r = api.character_info_from_id(char_id=id)
-        return id, r
+        try:
+            person = api.character_id_from_name(name=name)
+            return person.result
+        except:
+            return None
 
     @staticmethod
     def getkbstats(id):
+        try:
+            r = requests.get('https://zkillboard.com/api/stats/characterID/{}/'.format(id), timeout=10)
+        except TimeoutError:
+            return '[N/A, N/A]'
+        
+        try:
+            data = r.json()
+        except ValueError: #if character has no killboard things get real real weird
+            return '[0, 0]'
+        
+        if not data:
+            return '[0, 0]'
 
-        r = requests.get(ZKBAPI % id)
-        data = r.json()
         kills = data["totals"]["countDestroyed"]
         lost = data["totals"]["countLost"]
-        return "["+colours["GREEN"]+str(kills)+colours["NORMAL"]+", "+colours["RED"]+str(lost)+colours["NORMAL"]+"]"
+        return '[{}, {}]'.format(str(kills), str(lost))
+
+    @staticmethod
+    def getcharsheet(id):
+        api = evelink.eve.EVE()
+        person = api.character_info_from_id(id)
+        name = person.result['name']
+        corp = person.result['corp']['name']
+        corpsince = arrow.get(person.result['corp']['timestamp']).humanize()
+        alliance = person.result['alliance']['name']
+        secstatus = person.result['sec_status']
+        secstatus = '%.2f' % secstatus
+        secstatus = float(secstatus)
+        age = arrow.get(person.result['history'][-1]['start_ts']).humanize()
+        return name, corp, corpsince, alliance, secstatus, age
+
+    @staticmethod
+    def gethistory(id):
+        api = evelink.eve.EVE()
+        person = api.character_info_from_id(id)
+        corphistory = []
+        for corp in person.result['history']:
+            corphistory.append('{} - {}'.format(corp['corp_name'], arrow.get(corp['start_ts']).humanize()))
+            if len(corphistory) > 4:
+                return corphistory
+        return corphistory
 
     @botcmd(split_args_with=' ')
     def who(self, mess, args):
-        """Usage: !who <player name>
-        Is case sensitive, though does try to capitilize first and last name, but not always successful.
-
-        Returns KB stats, corp, alliance, and length of service"""
-
+        '''
+        Search for player details
+        '''
         if not args[0]:
-            return 'Should I read your mind on who to look for?'
-        colours.clear()
-        target = ''
-        for i in args:
-            target += i + ' '
-        target = target.strip()
-        try:
-            id, r = self.getdetailshash(target.strip())
-        #PANIC ON ALL ERRORS
-        except:
-            return "There's no pilot by the name {0} or {1}, dumdum".format(target, target.capitalize())
-        if r.result['sec_status']:
-            sec = self.formatsecstatus(r.result['sec_status'])
+            return 'Should I take a guess at who you are looking for?'
+        id = self.getid(' '.join(args))
+        if id:
+            kbstats = self.getkbstats(id)
+            name, corp, corpsince, alliance, secstatus, age = self.getcharsheet(id)
+            return '{} {}{} Born {} - {}[{}] - {}'.format(name, secstatus, kbstats, age, corp, corpsince, alliance)
         else:
-            sec = ("", "")
-        kbstats = self.getkbstats(id)
-        created = arrow.get(r.result['corp']['timestamp']).humanize()
-        startDate = arrow.get(r.result['history'][0]['start_ts']).humanize()
+            return '{} not found. Try again?'.format(' '.join(args))
 
-        if not r.result['alliance']['name']:
-            return "{}{} {}{}{} [{}] - {} [{}]".format(sec[0], r.result['name'], "["+sec[1]+"]", colours["NORMAL"],
-                                                       kbstats, created, r.result['corp']['name'], startDate)
+    @botcmd(split_args_with=' ')
+    def who_history(self, mess, args):
+        '''
+        Show the last 5 corps for a player
+        '''
+        if not args[0]:
+            return 'Should I take a guess who you are looking for?'
+        id = self.getid(' '.join(args))
+        if id:
+            corphistory = self.gethistory(id)
+            for corp in corphistory:
+                yield corp
         else:
-            return "{}{} {}{}{} [{}] - {} [{}] - {}".format(
-                sec[0], r.result['name'], "["+sec[1]+"]", colours["NORMAL"], kbstats, created, r.result['corp']['name'],
-                startDate, r.result['alliance']['name'])
+            return '{} was not found.  Try again? (Remember, case sensitive!'.format(' '.join(args))
