@@ -704,6 +704,82 @@ class Corp(object):
 
         return api.APIResult(results, api_result.timestamp, api_result.expires)
 
+    @api.auto_call('corp/Blueprints')
+    def blueprints(self, api_result=None):
+        rowset = api_result.result.find('rowset')
+        rows = rowset.findall('row')
+
+        results = {}
+        for row in rows:
+            results[int(row.attrib['itemID'])] = {
+                'location_id': int(row.attrib['locationID']),
+                'type_id': int(row.attrib['typeID']),
+                'type_name': row.attrib['typeName'],
+                'location_flag': int(row.attrib['flagID']),
+                'quantity': int(row.attrib['quantity']),
+                'time_efficiency': int(row.attrib['timeEfficiency']),
+                'material_efficiency': int(row.attrib['materialEfficiency']),
+                'runs': int(row.attrib['runs']),
+            }
+
+        return api.APIResult(results, api_result.timestamp, api_result.expires)
+
+    @api.auto_call('corp/Facilities')
+    def facilities(self, api_result=None):
+        rowset = api_result.result.find('rowset')
+        rows = rowset.findall('row')
+
+        results = {}
+        for row in rows:
+            a = row.attrib
+            results[int(a['facilityID'])] = {
+                'region': {
+                    'id': int(a['regionID']),
+                    'name': a['regionName'],
+                },
+                'system': {
+                    'id': int(a['solarSystemID']),
+                    'name': a['solarSystemName'],
+                },
+                'starbase_modifier': float(a['starbaseModifier']),
+                'tax': float(a['tax']),
+                'type_id': int(a['typeID']),
+                'type_name': a['typeName'],
+            }
+        return api.APIResult(results, api_result.timestamp, api_result.expires)
+
+    @api.auto_call('corp/CustomsOffices')
+    def customs_offices(self, api_result=None):
+        rowset = api_result.result.find('rowset')
+        rows = rowset.findall('row')
+
+        results = {}
+        for row in rows:
+            a = row.attrib
+            results[int(a['itemID'])] = {
+                'system': {
+                    'id': int(a['solarSystemID']),
+                    'name': a['solarSystemName'],
+                },
+                'permissions': {
+                    'alliance': a['allowAlliance'] == 'True',
+                    'standings': a['allowStandings'] == 'True',
+                    'minimum_standing': float(a['standingLevel']),
+                },
+                'reinforce_hour': int(a['reinforceHour']),
+                'tax_rate': {
+                    'alliance': float(a['taxRateAlliance']),
+                    'corp': float(a['taxRateCorp']),
+                    'standings': {
+                        'high': float(a['taxRateStandingHigh']),
+                        'good': float(a['taxRateStandingGood']),
+                        'neutral': float(a['taxRateStandingNeutral']),
+                        'bad': float(a['taxRateStandingBad']),
+                        'horrible': float(a['taxRateStandingHorrible']),
+                    },
+                },
+            }
+        return api.APIResult(results, api_result.timestamp, api_result.expires)
 
 
 # vim: set ts=4 sts=4 sw=4 et:

@@ -5,6 +5,10 @@ from evelink.parsing.contract_bids import parse_contract_bids
 from evelink.parsing.contract_items import parse_contract_items
 from evelink.parsing.contracts import parse_contracts
 from evelink.parsing.industry_jobs import parse_industry_jobs
+from evelink.parsing.planetary_interactions import parse_planetary_colonies
+from evelink.parsing.planetary_interactions import parse_planetary_links
+from evelink.parsing.planetary_interactions import parse_planetary_pins
+from evelink.parsing.planetary_interactions import parse_planetary_routes
 from evelink.parsing.kills import parse_kills
 from evelink.parsing.orders import parse_market_orders
 from evelink.parsing.wallet_journal import parse_wallet_journal
@@ -113,6 +117,26 @@ class Char(object):
         """Get a historical list of industry jobs for a character (active and past)."""
         return api.APIResult(parse_industry_jobs(api_result.result), api_result.timestamp, api_result.expires)
 
+    @auto_call('char/PlanetaryColonies')
+    def planetary_colonies(self, api_result=None):
+        """Get a list of PI planets for a character."""
+        return api.APIResult(parse_planetary_colonies(api_result.result), api_result.timestamp, api_result.expires)
+
+    @auto_call('char/PlanetaryLinks', map_params={'planet_id': 'planetID'})
+    def planetary_links(self, planet_id, api_result=None):
+        """Get a list of PI links for a character's planet."""
+        return api.APIResult(parse_planetary_links(api_result.result), api_result.timestamp, api_result.expires)
+
+    @auto_call('char/PlanetaryPins', map_params={'planet_id': 'planetID'})
+    def planetary_pins(self, planet_id, api_result=None):
+        """Get a list of PI facilities for a character's planet."""
+        return api.APIResult(parse_planetary_pins(api_result.result), api_result.timestamp, api_result.expires)
+
+    @auto_call('char/PlanetaryRoutes', map_params={'planet_id': 'planetID'})
+    def planetary_routes(self, planet_id, api_result=None):
+        """Get a list of PI routing entries for a character's planet."""
+        return api.APIResult(parse_planetary_routes(api_result.result), api_result.timestamp, api_result.expires)
+
     @auto_call('char/KillLog', map_params={'before_kill': 'beforeKillID'})
     def kills(self, before_kill=None, api_result=None):
         """Look up recent kills for a character.
@@ -206,32 +230,78 @@ class Char(object):
                 'id': _int('allianceID') or None,
                 'name': _str('allianceName'),
             },
-            'clone': {
-                'name': _str('cloneName'),
-                'skillpoints': _int('cloneSkillPoints'),
-            },
             'balance': _float('balance'),
             'attributes': {},
+            'implants': {},
+            'jump': {
+                'activation_ts': _ts('jumpActivation'),
+                'fatigue_ts': _ts('jumpFatigue'),
+                'last_update_ts': _ts('jumpLastUpdate'),
+            },
+            'remote_station_ts': _ts('remoteStationDate'),
+            'last_respec_ts': _ts('lastRespecDate'),
+            'last_timed_respec_ts': _ts('lastTimedRespec'),
+            'free_respecs': _int('freeRespecs'),
+            'free_skillpoints': _int('freeSkillPoints'),
+            'home_station_id': _int('homeStationID'),
+            'jumpclone': {
+                'jump_ts': _ts('cloneJumpDate'),
+            },
         }
 
         for attr in ('intelligence', 'memory', 'charisma', 'perception', 'willpower'):
             result['attributes'][attr] = {}
             base = int(api_result.result.findtext('attributes/%s' % attr))
             result['attributes'][attr]['base'] = base
-            result['attributes'][attr]['total'] = base
-            bonus = api_result.result.find('attributeEnhancers/%sBonus' % attr)
-            if bonus is not None:
-                mod = int(bonus.findtext('augmentatorValue'))
-                result['attributes'][attr]['total'] += mod
-                result['attributes'][attr]['bonus'] = {
-                    'name': bonus.findtext('augmentatorName'),
-                    'value': mod,
-                }
+
+            # NOTE: Removed due to the deprecation of the attribute enhancers section.
+            # Better to break things which rely on this field than return the base.
+            #
+            #result['attributes'][attr]['total'] = base
+
+            # NOTE: CCP has deprecated this in favor of listing the implant typeIDs
+            #       as seen below in the 'implants' section.
+            #
+            #bonus = api_result.result.find('attributeEnhancers/%sBonus' % attr)
+            #if bonus is not None:
+            #    mod = int(bonus.findtext('augmentatorValue'))
+            #    result['attributes'][attr]['total'] += mod
+            #    result['attributes'][attr]['bonus'] = {
+            #        'name': bonus.findtext('augmentatorName'),
+            #        'value': mod,
+            #    }
 
         rowsets = {}
         for rowset in api_result.result.findall('rowset'):
             key = rowset.attrib['name']
             rowsets[key] = rowset
+
+        for implant in rowsets['implants']:
+            a = implant.attrib
+            result['implants'][int(a['typeID'])] = a['typeName']
+
+        jumpclone_implants = {}
+        for implant in rowsets['jumpCloneImplants']:
+            a = implant.attrib
+            jumpclone_id = int(a['jumpCloneID'])
+            implants = jumpclone_implants.setdefault(jumpclone_id, {})
+            implants[int(a['typeID'])] = a['typeName']
+
+        result['jumpclone']['clones'] = {}
+        for jumpclone in rowsets['jumpClones']:
+            a = jumpclone.attrib
+            jumpclone_id = int(a['jumpCloneID'])
+            location_id = int(a['locationID'])
+            # This is keyed off location_id because it simplifies a
+            # common lookup ("what systems do I have jumpclones in")
+            result['jumpclone']['clones'][location_id] = {
+                'id': jumpclone_id,
+                'name': a['cloneName'],
+                'type_id': int(a['typeID']),
+                'location_id': location_id,
+                'implants': jumpclone_implants.get(jumpclone_id, {})
+            }
+
 
         result['skills'] = []
         result['skillpoints'] = 0
@@ -245,10 +315,6 @@ class Char(object):
                 'published': a['published'] == '1',
             })
             result['skillpoints'] += sp
-
-        result['certificates'] = set()
-        for cert in rowsets['certificates']:
-            result['certificates'].add(int(cert.attrib['certificateID']))
 
         result['roles'] = {}
         for our_role, ccp_role in constants.Char().corp_roles.items():
@@ -563,6 +629,26 @@ class Char(object):
                 'y' : y,
                 'z' : z,
             }
+        return api.APIResult(results, api_result.timestamp, api_result.expires)
+
+    @auto_call('char/Blueprints')
+    def blueprints(self, api_result=None):
+        rowset = api_result.result.find('rowset')
+        rows = rowset.findall('row')
+
+        results = {}
+        for row in rows:
+            results[int(row.attrib['itemID'])] = {
+                'location_id': int(row.attrib['locationID']),
+                'type_id': int(row.attrib['typeID']),
+                'type_name': row.attrib['typeName'],
+                'location_flag': int(row.attrib['flagID']),
+                'quantity': int(row.attrib['quantity']),
+                'time_efficiency': int(row.attrib['timeEfficiency']),
+                'material_efficiency': int(row.attrib['materialEfficiency']),
+                'runs': int(row.attrib['runs']),
+            }
+
         return api.APIResult(results, api_result.timestamp, api_result.expires)
 
 
