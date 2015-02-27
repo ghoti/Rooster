@@ -6,7 +6,7 @@ import sqlite3
 import requests
 import xml.etree.ElementTree as ET
 
-EVESTATICDATADUMP = os.getcwd() + '\static.db'
+EVESTATICDATADUMP = os.getcwd() + '/static.db'
 
 #system = 30000142 jita
 #region = 10000002 forge
