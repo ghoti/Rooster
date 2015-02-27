@@ -78,12 +78,14 @@ class EveWho(BotPlugin):
         '''
         Show the last 5 corps for a player
         '''
-        if not args[0]:
-            return 'Should I take a guess who you are looking for?'
+        if not args[0]:  #i cant figure out why err sometimes ignores this.  rather, most of the time.
+            yield 'Should I take a guess who you are looking for?'
+            return
         id = self.getid(' '.join(args))
         if id:
             corphistory = self.gethistory(id)
             for corp in corphistory:
                 yield corp
         else:
-            return '{} was not found.  Try again? (Remember, case sensitive!'.format(' '.join(args))
+            yield '{} was not found.  Try again? (Remember, case sensitive!'.format(' '.join(args))
+            return
