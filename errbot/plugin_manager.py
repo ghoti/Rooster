@@ -1,22 +1,27 @@
 from configparser import NoSectionError
 from itertools import chain
+import importlib
+import fnmatch
 import logging
 import sys
 import os
-from errbot import PY2
-from errbot.botplugin import BotPlugin
-from errbot.utils import version2array, PY3
-from errbot.templating import remove_plugin_templates_path, add_plugin_templates_path
-from errbot.version import VERSION
+import pip
+from . import PY2
+from .botplugin import BotPlugin
+from .utils import version2array, PY3
+from .templating import remove_plugin_templates_path, add_plugin_templates_path
+from .version import VERSION
 from yapsy.PluginManager import PluginManager
-from imp import reload
 
 # hardcoded directory for the system plugins
-from errbot import holder
+from . import holder
 
-BUILTIN = str(os.path.dirname(os.path.abspath(__file__))) + os.sep + 'builtins'
-if PY2:  # keys needs to be byte strings en shelves under python 2
-    BUILTIN = BUILTIN.encode()
+BUILTIN = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'builtins')
+
+try:
+    from importlib import reload  # new in python 3.4
+except ImportError:
+    from imp import reload
 
 
 class IncompatiblePluginException(Exception):
@@ -27,21 +32,35 @@ class PluginConfigurationException(Exception):
     pass
 
 
-def get_builtins(extra):
+def find_plugin_roots(path):
+    """ Recursively find the plugins from the given path.
+    It is usefull so you can give a root directory of checked out plugins and
+    it will discover them automatically.
+    """
+    plugin_roots = set()  # you can have several .plug per directory.
+    for root, dirnames, filenames in os.walk(path):
+        for filename in fnmatch.filter(filenames, '*.plug'):
+            plugin_roots.add(os.path.dirname(os.path.join(root, filename)))
+    return plugin_roots
+
+
+def get_preloaded_plugins(extra):
     # adds the extra plugin dir from the setup for developers convenience
+    all_builtins_and_extra = [BUILTIN]
     if extra:
         if isinstance(extra, list):
-            return [BUILTIN] + extra
-        return [BUILTIN, extra]
-    else:
-        return [BUILTIN]
+            for path in extra:
+                all_builtins_and_extra.extend(find_plugin_roots(path))
+        else:
+            all_builtins_and_extra.extend(find_plugin_roots(extra))
+    return all_builtins_and_extra
 
 
 def init_plugin_manager():
     global simplePluginManager
 
     if not holder.plugin_manager:
-        logging.info('init plugin manager')
+        logging.debug('init plugin manager')
         simplePluginManager = PluginManager(categories_filter={"bots": BotPlugin})
         simplePluginManager.setPluginInfoExtension('plug')
         holder.plugin_manager = simplePluginManager
@@ -170,17 +189,36 @@ def reload_plugin_by_name(name):
     plugin.plugin_object.__class__ = new_class
 
 
-def update_plugin_places(list):
-    from config import BOT_EXTRA_PLUGIN_DIR
+def install_package(package):
+    if hasattr(sys, 'real_prefix'):
+        # this is a virtualenv, so we can use it directly
+        pip.main(['install', package])
+    else:
+        # otherwise only install it as a user package
+        pip.main(['install', '--user', package])
+    globals()[package] = importlib.import_module(package)
 
-    builtins = get_builtins(BOT_EXTRA_PLUGIN_DIR)
-    for entry in chain(builtins, list):
+
+def update_plugin_places(path_list, extra_plugin_dir, autoinstall_deps=True):
+    builtins = get_preloaded_plugins(extra_plugin_dir)
+    paths = builtins + path_list
+    for entry in paths:
         if entry not in sys.path:
-            sys.path.append(entry)  # so the plugins can relatively import their submodules
-
-    errors = [check_dependencies(path) for path in list]
-    errors = [error for error in errors if error is not None]
-    simplePluginManager.setPluginPlaces(chain(builtins, list))
+            sys.path.append(entry)  # so plugins can relatively import their submodules
+    dependencies_result = [check_dependencies(path) for path in paths]
+    deps_to_install = set()
+    if autoinstall_deps:
+        for result in dependencies_result:
+            if result:
+                deps_to_install.update(result[1])
+        if deps_to_install:
+            for dep in deps_to_install:
+                logging.info("Trying to install an unmet dependency: %s" % dep)
+                install_package(dep)
+        errors = []
+    else:
+        errors = [result[0] for result in dependencies_result if result is not None]
+    simplePluginManager.setPluginPlaces(chain(builtins, path_list))
     all_candidates = []
 
     def add_candidate(candidate):
@@ -224,6 +262,10 @@ def global_restart():
 
 
 def check_dependencies(path):
+    """ This methods returns a pair of (message, packages missing).
+    Or None if everything is OK.
+    """
+    logging.debug("check dependencies of %s" % path)
     # noinspection PyBroadException
     try:
         from pkg_resources import get_distribution
@@ -242,7 +284,8 @@ def check_dependencies(path):
                 except Exception as _:
                     missing_pkg.append(stripped)
         if missing_pkg:
-            return ('You need those dependencies for %s: ' % path) + ','.join(missing_pkg)
+            return (('You need those dependencies for %s: ' % path) + ','.join(missing_pkg),
+                    missing_pkg)
         return None
     except Exception as _:
-        return 'You need to have setuptools installed for the dependency check of the plugins'
+        return ('You need to have setuptools installed for the dependency check of the plugins', [])

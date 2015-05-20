@@ -1,0 +1,9 @@
+[Core]
+Name = Poop
+Module = Poop
+
+[Documentation]
+Description = Who is poops friend?  You are.
+
+[Python]
+Version=3

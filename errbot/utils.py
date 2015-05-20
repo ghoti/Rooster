@@ -1,12 +1,15 @@
 # -*- coding: utf-8 -*-
+from itertools import starmap, repeat
 import logging
-import inspect
 import os
 import re
 from html import entities
 import sys
 import time
+from functools import wraps
 from xml.etree.ElementTree import tostring
+import inspect
+
 
 PY3 = sys.version_info[0] == 3
 PY2 = not PY3
@@ -16,12 +19,12 @@ PLUGINS_SUBDIR = b'plugins' if PY2 else 'plugins'
 
 def get_sender_username(mess):
     """Extract the sender's user name from a message"""
-    type = mess.getType()
-    jid = mess.getFrom()
-    if type == "groupchat":
-        username = jid.getResource()
-    elif type == "chat":
-        username = jid.getNode()
+    type_ = mess.type
+    jid = mess.frm
+    if type_ == "groupchat":
+        username = jid.resource
+    elif type_ == "chat":
+        username = jid.node
     else:
         username = ""
     return username
@@ -75,8 +78,8 @@ def tail(f, window=20):
 
 
 def which(program):
-    def is_exe(fpath):
-        return os.path.isfile(fpath) and os.access(fpath, os.X_OK)
+    def is_exe(file_path):
+        return os.path.isfile(file_path) and os.access(file_path, os.X_OK)
 
     fpath, fname = os.path.split(program)
     if fpath:
@@ -169,23 +172,23 @@ def unescape_xml(text):
     """
 
     def fixup(m):
-        text = m.group(0)
-        if text[:2] == "&#":
+        txt = m.group(0)
+        if txt[:2] == "&#":
             # character reference
             try:
-                if text[:3] == "&#x":
-                    return chr(int(text[3:-1], 16))
+                if txt[:3] == "&#x":
+                    return chr(int(txt[3:-1], 16))
                 else:
-                    return chr(int(text[2:-1]))
+                    return chr(int(txt[2:-1]))
             except ValueError:
                 pass
         else:
             # named entity
             try:
-                text = chr(entities.name2codepoint[text[1:-1]])
+                txt = chr(entities.name2codepoint[txt[1:-1]])
             except KeyError:
                 pass
-        return text  # leave as is
+        return txt  # leave as is
 
     return re.sub("&#?\w+;", fixup, text)
 
@@ -209,7 +212,7 @@ def utf8(key):
 
 
 def mess_2_embeddablehtml(mess):
-    html_content = mess.getHTML()
+    html_content = mess.html
     if html_content is not None:
         body = html_content.find('{http://jabber.org/protocol/xhtml-im}body')
         result = ''
@@ -217,7 +220,7 @@ def mess_2_embeddablehtml(mess):
             result += tostring(child).decode().replace('ns0:', '')
         return result, True
     else:
-        return mess.getBody(), False
+        return mess.body, False
 
 
 def parse_jid(jid):
@@ -260,3 +263,47 @@ def split_string_after(str_, n):
     """Yield chunks of length `n` from the given string"""
     for start in range(0, len(str_), n):
         yield str_[start:start + n]
+
+
+class deprecated(object):
+    """ deprecated decorator. emits a warning on a call on an old method and call the new method anyway """
+    def __init__(self, new=None):
+        self.new = new
+
+    def __call__(self, old):
+        @wraps(old)
+        def wrapper(*args, **kwds):
+            msg = ' {0.filename}:{0.lineno} : '.format(inspect.getframeinfo(inspect.currentframe().f_back))
+            if len(args):
+                pref = type(args[0]).__name__ + '.'  # TODO might break for individual methods
+            else:
+                pref = ''
+            msg += 'call to the deprecated %s%s' % (pref, old.__name__)
+            if self.new is not None:
+                if type(self.new) is property:
+                    msg += '... use the property %s%s instead' % (pref, self.new.fget.__name__)
+                else:
+                    msg += '... use %s%s instead' % (pref, self.new.__name__)
+            msg += '.'
+            logging.warning(msg)
+
+            if self.new:
+                if type(self.new) is property:
+                    return self.new.fget(*args, **kwds)
+                return self.new(*args, **kwds)
+            return old(*args, **kwds)
+
+        wrapper.__name__ = old.__name__
+        wrapper.__doc__ = old.__doc__
+        wrapper.__dict__.update(old.__dict__)
+        return wrapper
+
+
+def repeatfunc(func, times=None, *args):  # from the itertools receipes
+    """Repeat calls to func with specified arguments.
+
+    Example:  repeatfunc(random.random)
+    """
+    if times is None:
+        return starmap(func, repeat(args))
+    return starmap(func, repeat(args, times))

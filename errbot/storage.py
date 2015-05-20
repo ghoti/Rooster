@@ -2,7 +2,7 @@ from collections import MutableMapping
 import logging
 import shelve
 
-from errbot import PY2
+from . import PY2
 
 
 class StoreException(Exception):
@@ -21,6 +21,9 @@ class StoreMixin(MutableMapping):
     """
      This class handle the basic needs of bot plugins and core like loading, unloading and creating a storage
     """
+
+    def __init__(self):
+        self.shelf = None
 
     def open_storage(self, path):
         if hasattr(self, 'shelf') and self.shelf is not None:

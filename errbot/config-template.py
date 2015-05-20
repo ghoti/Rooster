@@ -31,7 +31,18 @@ BOT_DATA_DIR = '/var/lib/err'
 # locally before publishing it. Note that you can specify only a single
 # directory, however you are free to create subdirectories with multiple
 # plugins inside this directory.
-BOT_EXTRA_PLUGIN_DIR = None 
+BOT_EXTRA_PLUGIN_DIR = None
+
+
+# Should plugin dependencies be installed automatically? If this is true
+# then Err will use pip to install any missing dependencies automatically.
+#
+# If you have installed Err in a virtualenv, this will run the equivalent
+# of `pip install -r requirements.txt`.
+# If no virtualenv is detected, the equivalent of `pip install --user -r
+# requirements.txt` is used to ensure the package(s) is/are only installed for
+# the user running Err.
+#AUTOINSTALL_DEPS = True
 
 # The location of the log file. If you set this to None, then logging will
 # happen to console only.
@@ -79,6 +90,9 @@ BOT_IDENTITY = {
     # 'username' : 'errbot',
     # 'password' : 'changeme',
 
+    ## TOX Mode (comment the others above if using this mode)
+    # BOT_IDENTITY = {'username': 'errbot',}
+
     ## IRC mode (Comment the others above if using this mode)
     # 'nickname' : 'err-chatbot',
     # 'username' : 'err-chatbot',    # optional, defaults to nickname if omitted
@@ -88,12 +102,17 @@ BOT_IDENTITY = {
     # 'ssl': False,                  # optional
 }
 
+## TOX Mode
+# TOX_BOOTSTRAP_SERVER = ["54.199.139.199", 33445, "7F9C31FE850E97CEFD4C4591DF93FC757C7C12549DDD55F8EEAECC34FE76C029"]
+
 # Set the admins of your bot. Only these users will have access
 # to the admin-only commands.
 #
-# Note: With campfire this should be the full name of a person, like so: 
+# Campfire syntax is the full name:
 # BOT_ADMINS = ('Guillaume Binet',)
 #
+# TOX syntax is a hash.
+# BOT_ADMINS = ['F9886B47503FB80E6347CC0907D8000144305796DE54693253AA5E574E5E8106C7D002557189', ]
 BOT_ADMINS = ('gbin@localhost',)
 
 # Chatrooms your bot should join on startup. For the IRC backend you 
@@ -237,8 +256,11 @@ REVERSE_CHATROOM_RELAY = {}
 # try to gradually lower this value until it no longer happens.
 #XMPP_KEEPALIVE_INTERVAL = 300
 
-# Message rate limiting for the IRC backend.
-# Rate limiter for regular channel messages, set to None to disable limits.
-#IRC_CHANNEL_RATE = 1
-# Rate limiter for private messages, set to None to disable limits.
-#IRC_PRIVATE_RATE = 1
+# Message rate limiting for the IRC backend. This will delay subsequent
+# messages by this many seconds (floats are supported). Setting these
+# to a value of 0 effectively disables rate limiting.
+#IRC_CHANNEL_RATE = 1  # Regular channel messages
+#IRC_PRIVATE_RATE = 1  # Private messages
+
+# Allow messages sent in a chatroom to be directed at requester.
+#GROUPCHAT_NICK_PREFIXED = False

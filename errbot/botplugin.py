@@ -1,9 +1,13 @@
 import logging
 import os
+import shlex
+import warnings
+
 from threading import Timer, current_thread
-from errbot.utils import PLUGINS_SUBDIR, recurse_check_structure
-from errbot.storage import StoreMixin, StoreNotOpenError
-from errbot import holder
+
+from .utils import PLUGINS_SUBDIR, recurse_check_structure
+from .storage import StoreMixin, StoreNotOpenError
+from . import holder
 
 
 class BotPluginBase(StoreMixin):
@@ -19,16 +23,27 @@ class BotPluginBase(StoreMixin):
         self.current_timers = []
         super(BotPluginBase, self).__init__()
 
+    @property
+    def mode(self):
+        """
+        Get the current active backend.
+
+        :return: the mode like 'tox', 'xmpp' etc...
+        """
+        return holder.bot.mode
+
+    @property
+    def bot_config(self):
+        return holder.bot.bot_config
+
     def activate(self):
         """
             Override if you want to do something at initialization phase (don't forget to
             super(Gnagna, self).activate())
         """
-        from config import BOT_DATA_DIR
-
         classname = self.__class__.__name__
         logging.debug('Init storage for %s' % classname)
-        filename = BOT_DATA_DIR + os.sep + PLUGINS_SUBDIR + os.sep + classname + '.db'
+        filename = os.path.join(self.bot_config.BOT_DATA_DIR, PLUGINS_SUBDIR, classname + '.db')
         logging.debug('Loading %s' % filename)
         self.open_storage(filename)
         holder.bot.inject_commands_from(self)
@@ -163,61 +178,104 @@ class BotPlugin(BotPluginBase):
 
     def activate(self):
         """
-            Override if you want to do something at initialization phase (don't forget
-            to super(Gnagna, self).activate())
+            Triggered on plugin activation.
+
+            Override this method if you want to do something at initialization phase
+            (don't forget to `super().activate()`).
         """
         super(BotPlugin, self).activate()
 
     def deactivate(self):
         """
-            Override if you want to do something at tear down phase (don't forget to
-            super(Gnagna, self).deactivate())
+            Triggered on plugin deactivation.
+
+            Override this method if you want to do something at tear-down phase
+            (don't forget to `super().deactivate()`).
         """
         super(BotPlugin, self).deactivate()
 
     def callback_connect(self):
         """
-            Override to get a notified when the bot is connected
+            Triggered when the bot has successfully connected to the chat network.
+
+            Override this method to get notified when the bot is connected.
         """
         pass
 
-    def callback_message(self, conn, mess):
+    def callback_message(self, message):
         """
-            Override to get a notified on *ANY* message.
+            Triggered on every message not coming from the bot itself.
 
-            If you are interested only by chatting message you can filter for example
-            mess.getType() in ('groupchat', 'chat')
+            Override this method to get notified on *ANY* message.
+
+            :param message:
+                An instance of :class:`~errbot.backends.base.Message`
+                representing the message that was received.
         """
         pass
 
-    def callback_botmessage(self, mess):
+    def callback_presence(self, presence):
         """
-            Override to get a notified on messages from the bot itself (emitted from
-            your plugin sisters and brothers for example).
+            Triggered on every presence change.
+
+            :param presence:
+                An instance of :class:`~errbot.backends.base.Presence`
+                representing the new presence state that was received.
         """
         pass
 
-    def callback_contact_online(self, conn, pres):
+    def callback_stream(self, stream):
         """
-            Override to get a notification when a contact becomes online.
+            Triggered asynchronously (in a different thread context) on every incoming stream
+            request or file transfert requests.
+            You can block this call until you are done with the stream.
+            To signal that you accept / reject the file, simply call stream.accept()
+            or stream.reject() and return.
+            :param stream:
+                the incoming stream request.
+        """
+        stream.reject()  # by default, reject the file as the plugin doesn't want it.
+
+    def callback_botmessage(self, message):
+        """
+            Triggered on every message coming from the bot itself.
+
+            Override this method to get notified on all messages coming from
+            the bot itself (including those from other plugins).
+
+            :param message:
+                An instance of :class:`~errbot.backends.base.Message`
+                representing the message that was received.
         """
         pass
 
-    def callback_contact_offline(self, conn, pres):
+    def callback_room_joined(self, room):
         """
-            Override to get notified when a contact becomes offline.
+            Triggered when the bot has joined a MUC.
+
+            :param room:
+                An instance of :class:`~errbot.backends.base.MUCRoom`
+                representing the room that was joined.
         """
         pass
 
-    def callback_user_joined_chat(self, conn, pres):
+    def callback_room_left(self, room):
         """
-            Override to get notified when any user joins a chatroom or an equivalent.
+            Triggered when the bot has left a MUC.
+
+            :param room:
+                An instance of :class:`~errbot.backends.base.MUCRoom`
+                representing the room that was left.
         """
         pass
 
-    def callback_user_left_chat(self, conn, pres):
+    def callback_room_topic(self, room):
         """
-            Override to get notified when any user leaves a chatroom or an equivalent.
+            Triggered when the topic in a MUC changes.
+
+            :param room:
+                An instance of :class:`~errbot.backends.base.MUCRoom`
+                representing the room for which the topic changed.
         """
         pass
 
@@ -230,12 +288,25 @@ class BotPlugin(BotPluginBase):
         """
         return holder.bot.warn_admins(warning)
 
-    def send(self, user, text, in_reply_to=None, message_type='chat'):
+    def send(self, user, text, in_reply_to=None, message_type='chat', groupchat_nick_reply=False):
         """
-            Sends asynchronously a message a room or a user.
+            Sends asynchronously a message to a room or a user.
              if it is a room message_type needs to by 'groupchat' and user the room.
         """
-        return holder.bot.send(user, text, in_reply_to, message_type)
+        return holder.bot.send(user, text, in_reply_to, message_type, groupchat_nick_reply)
+
+    def send_stream_request(self, user, fsource, name=None, size=None, stream_type=None):
+        """
+            Sends asynchronously a stream/file to a user.
+            user is the jid of the person you want to send it to.
+            fsource is a file object you want to send.
+            name is an optional filename for it.
+            size is optional and is the espected size for it.
+            stream_type is optional for the mime_type of the content.
+
+            It will return a Stream object on which you can monitor the progress of it.
+        """
+        return holder.bot.send_stream_request(user, fsource, name, size, stream_type)
 
     def bare_send(self, xmppy_msg):
         """
@@ -250,15 +321,47 @@ class BotPlugin(BotPluginBase):
 
     def join_room(self, room, username=None, password=None):
         """
-            Make the bot join a room
+        Join a room (MUC).
+
+        :param room:
+            The JID/identifier of the room to join.
+        :param username:
+            An optional username to use.
+        :param password:
+            An optional password to use (for password-protected rooms).
         """
         return holder.bot.join_room(room, username, password)
+
+    def rooms(self):
+        """
+        The list of rooms the bot is currently in.
+        """
+        return holder.bot.rooms()
+
+    def query_room(self, room):
+        """
+        Query a room for information.
+
+        :param room:
+            The JID/identifier of the room to query for.
+        :returns:
+            An instance of :class:`~errbot.backends.base.MUCRoom`.
+        :raises:
+            :class:`~errbot.backends.base.RoomDoesNotExistError` if the room doesn't exist.
+        """
+        return holder.bot.query_room(room=room)
 
     def invite_in_room(self, room, jids_to_invite):
         """
             Make the bot invite a list of jids to a room
         """
-        return holder.bot.invite_in_room(room, jids_to_invite)
+        warnings.warn(
+            "Using invite_in_room is deprecated, use invite from the "
+            "MUCRoom class instead.",
+            DeprecationWarning,
+            stacklevel=2
+        )
+        self.query_room(room).invite(jids_to_invite)
 
     def get_installed_plugin_repos(self):
         """
@@ -285,3 +388,53 @@ class BotPlugin(BotPluginBase):
             you need to regive the same parameters as the original start_poller to match a specific poller to stop
         """
         super(BotPlugin, self).stop_poller(method, args, kwargs)
+
+
+class ArgParserBase(object):
+    """
+    The `ArgSplitterBase` class defines the API which is used for argument
+    splitting (used by the `split_args_with` parameter on
+    :func:`~errbot.decorators.botcmd`).
+    """
+
+    def parse_args(self, args):
+        """
+        This method takes a string of un-split arguments and parses it,
+        returning a list that is the result of splitting.
+
+        If splitting fails for any reason it should return an exception
+        of some kind.
+        """
+        raise NotImplementedError()
+
+
+class SeparatorArgParser(ArgParserBase):
+    """
+    This argument splitter splits args on a given separator, like
+    :func:`str.split` does.
+    """
+
+    def __init__(self, separator=None, maxsplit=-1):
+        """
+        :param separator:
+            The separator on which arguments should be split. If sep is
+            None, any whitespace string is a separator and empty strings
+            are removed from the result.
+        :param maxsplit:
+            If given, do at most this many splits.
+        """
+        self.separator = separator
+        self.maxsplit = maxsplit
+
+    def parse_args(self, args):
+        return args.split(self.separator, self.maxsplit)
+
+
+class ShlexArgParser(ArgParserBase):
+    """
+    This argument splitter splits args using posix shell quoting rules,
+    like :func:`shlex.split` does.
+    """
+
+    def parse_args(self, args):
+        return shlex.split(args)

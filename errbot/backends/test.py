@@ -1,13 +1,13 @@
 import logging
 import sys
-
 import unittest
-import pytest
-
 from os.path import sep, abspath
 from queue import Queue
 from tempfile import mkdtemp
 from threading import Thread
+
+import pytest
+
 
 __import__('errbot.config-template')
 config_module = sys.modules['errbot.config-template']
@@ -21,13 +21,16 @@ config_module.BOT_LOG_LEVEL = logging.DEBUG
 
 # Errbot machinery must not be imported before this point
 # because of the import hackery above.
-from errbot.backends.base import Message, build_message
-from errbot.builtins.wsview import reset_app
-from errbot.errBot import ErrBot
-from errbot.main import main
+from errbot.backends.base import (
+    Message, build_message, Identifier, MUCRoom, MUCOccupant  # noqa
+)
+from errbot.builtins.wsview import reset_app  # noqa
+from errbot.errBot import ErrBot  # noqa
+from errbot.main import main  # noqa
 
 incoming_stanza_queue = Queue()
 outgoing_message_queue = Queue()
+rooms = []
 
 QUIT_MESSAGE = '$STOP$'
 
@@ -36,24 +39,121 @@ STZ_PRE = 2
 STZ_IQ = 3
 
 
-class ConnectionMock():
-    def send(self, mess):
-        outgoing_message_queue.put(mess.getBody())
+class MUCRoom(MUCRoom):
+    def __init__(self, jid=None, node='', domain='', resource='', occupants=None, topic=None):
+        """
+        :param jid: See parent class.
+        :param node: See parent class.
+        :param domain: See parent class.
+        :param resource: See parent class.
+        :param occupants: Occupants of the room
+        :param topic: The MUC's topic
+        """
+        if occupants is None:
+            occupants = []
+        self._occupants = occupants
+        self._topic = topic
+        super(MUCRoom, self).__init__(jid=jid, node=node, domain=domain, resource=resource)
 
-    def send_message(self, mess):
-        self.send(mess)
+    @property
+    def occupants(self):
+        return self._occupants
+
+    @property
+    def joined(self):
+        global rooms
+        import config
+        bot_itself = config.BOT_IDENTITY['username']
+
+        room = [r for r in rooms if str(r) == str(self)]
+        if room:
+            return bot_itself in [str(o) for o in room[0].occupants]
+        else:
+            return False
+
+    def join(self, username=None, password=None):
+        global rooms
+        import config
+        from errbot.holder import bot
+        bot_itself = config.BOT_IDENTITY['username']
+
+        if self.joined:
+            logging.warning("Attempted to join room '{!s}', but already in this room".format(self))
+            return
+
+        if not self.exists:
+            logging.debug("Room {!s} doesn't exist yet, creating it".format(self))
+            self.create()
+
+        room = [r for r in rooms if str(r) == str(self)][0]
+        room._occupants.append(MUCOccupant(bot_itself))
+        logging.info("Joined room {!s}".format(self))
+        bot.callback_room_joined(room)
+
+    def leave(self, reason=None):
+        global rooms
+        import config
+        from errbot.holder import bot
+        bot_itself = config.BOT_IDENTITY['username']
+
+        if not self.joined:
+            logging.warning("Attempted to leave room '{!s}', but not in this room".format(self))
+            return
+
+        room = [r for r in rooms if str(r) == str(self)][0]
+        room._occupants = [o for o in room._occupants if str(o) != bot_itself]
+        logging.info("Left room {!s}".format(self))
+        bot.callback_room_left(room)
+
+    @property
+    def exists(self):
+        global rooms
+        return str(self) in [str(r) for r in rooms]
+
+    def create(self):
+        global rooms
+        if self.exists:
+            logging.warning("Room {!s} already created".format(self))
+        else:
+            rooms.append(self)
+            logging.info("Created room {!s}".format(self))
+
+    def destroy(self):
+        global rooms
+        if not self.exists:
+            logging.warning("Cannot destroy room {!s}, it doesn't exist".format(self))
+        else:
+            rooms = [r for r in rooms if str(r) != str(self)]
+            logging.info("Destroyed room {!s}".format(self))
+
+    @property
+    def topic(self):
+        return self._topic
+
+    @topic.setter
+    def topic(self, topic):
+        global rooms
+        self._topic = topic
+        room = [r for r in rooms if str(r) == str(self)][0]
+        room._topic = self._topic
+        logging.info("Topic for room {!s} set to '{}'".format(self, topic))
+        from errbot.holder import bot
+        bot.callback_room_topic(self)
 
 
 class TestBackend(ErrBot):
-    conn = ConnectionMock()
+    def __init__(self, config):
+        super().__init__(config)
+        self.jid = Identifier('Err')  # whatever
+        self.sender = config.BOT_ADMINS[0]  # By default, assume this is the admin talking
+
+    def send_message(self, mess):
+        super(TestBackend, self).send_message(mess)
+        outgoing_message_queue.put(mess.body)
 
     def serve_forever(self):
-        import config
 
-        self.jid = 'Err@localhost'  # whatever
-        self.connect()  # be sure we are "connected" before the first command
         self.connect_callback()  # notify that the connection occured
-        self.sender = config.BOT_ADMINS[0]  # By default, assume this is the admin talking
         try:
             while True:
                 stanza_type, entry = incoming_stanza_queue.get()
@@ -62,19 +162,20 @@ class TestBackend(ErrBot):
                     break
                 if stanza_type is STZ_MSG:
                     msg = Message(entry)
-                    msg.setFrom(self.sender)
-                    msg.setTo(self.jid)  # To me only
-                    self.callback_message(self.conn, msg)
+                    msg.frm = self.sender
+                    msg.to = self.jid  # To me only
+                    self.callback_message(msg)
                 elif stanza_type is STZ_PRE:
                     logging.info("Presence stanza received.")
+                    self.callback_presence(entry)
                 elif stanza_type is STZ_IQ:
                     logging.info("IQ stanza received.")
                 else:
                     logging.error("Unknown stanza type.")
 
-        except EOFError as _:
+        except EOFError:
             pass
-        except KeyboardInterrupt as _:
+        except KeyboardInterrupt:
             pass
         finally:
             logging.debug("Trigger disconnect callback")
@@ -83,9 +184,7 @@ class TestBackend(ErrBot):
             self.shutdown()
 
     def connect(self):
-        if not self.conn:
-            self.conn = ConnectionMock()
-        return self.conn
+        return
 
     def build_message(self, text):
         return build_message(text, Message)
@@ -93,12 +192,24 @@ class TestBackend(ErrBot):
     def shutdown(self):
         super(TestBackend, self).shutdown()
 
-    def join_room(self, room, username=None, password=None):
-        pass  # just ignore that
-
     @property
     def mode(self):
         return 'text'
+
+    def rooms(self):
+        global rooms
+        return [r for r in rooms if r.joined]
+
+    def query_room(self, room):
+        global rooms
+        try:
+            return [r for r in rooms if str(r) == str(room)][0]
+        except IndexError:
+            r = MUCRoom(jid=room)
+            return r
+
+    def groupchat_reply_format(self):
+        return '{0} {1}'
 
 
 def pop_message(timeout=5, block=True):
@@ -109,8 +220,10 @@ def push_message(msg):
     incoming_stanza_queue.put((STZ_MSG, msg), timeout=5)
 
 
-def push_presence(stanza):
-    pass
+def push_presence(presence):
+    """ presence must at least duck type base.Presence
+    """
+    incoming_stanza_queue.put((STZ_PRE, presence), timeout=5)
 
 
 # def pushIQ(stanza):
@@ -124,6 +237,12 @@ def zap_queues():
     while not outgoing_message_queue.empty():
         msg = outgoing_message_queue.get(block=False)
         logging.error('Message left in the outgoing queue during a test : %s' % msg)
+
+
+def reset_rooms():
+    """Reset/clear all rooms"""
+    global rooms
+    rooms = []
 
 
 class TestBot(object):
@@ -154,9 +273,9 @@ class TestBot(object):
         self.logger.setLevel(loglevel)
         self.logger.addHandler(file)
 
-        import config
-        config.BOT_EXTRA_PLUGIN_DIR = extra_plugin_dir
-        config.BOT_LOG_LEVEL = loglevel
+        config_module.BOT_EXTRA_PLUGIN_DIR = extra_plugin_dir
+        config_module.BOT_LOG_LEVEL = loglevel
+        self.bot_config = config_module
 
     def start(self):
         """
@@ -167,7 +286,8 @@ class TestBot(object):
         """
         if self.bot_thread is not None:
             raise Exception("Bot has already been started")
-        self.bot_thread = Thread(target=main, name='TestBot main thread', args=(TestBackend, self.logger))
+        self.bot_thread = Thread(target=main, name='TestBot main thread',
+                                 args=(TestBackend, self.logger, self.bot_config))
         self.bot_thread.setDaemon(True)
         self.bot_thread.start()
 
@@ -189,6 +309,7 @@ class TestBot(object):
         reset_app()  # empty the bottle ... hips!
         logging.info("Main bot thread quits")
         zap_queues()
+        reset_rooms()
         self.bot_thread = None
 
 

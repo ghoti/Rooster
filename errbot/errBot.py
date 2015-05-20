@@ -19,28 +19,25 @@ import inspect
 import gc
 import logging
 import os
-
 import shutil
 import subprocess
-
 from tarfile import TarFile
 from urllib.request import urlopen
 from pprint import pformat
 
-from errbot import botcmd, PY2
-from errbot.backends.base import Backend, HIDE_RESTRICTED_COMMANDS, ACLViolation
-
-from errbot.plugin_manager import (
+from . import botcmd, PY2
+from .backends.base import Backend, ACLViolation
+from .plugin_manager import (
     get_all_active_plugin_names, deactivate_all_plugins, update_plugin_places, get_all_active_plugin_objects,
     get_all_plugins, global_restart, get_all_plugin_names, activate_plugin_with_version_check,
     deactivate_plugin_by_name,
     get_plugin_obj_by_name, PluginConfigurationException, check_dependencies, reload_plugin_by_name
 )
-
-from errbot.storage import StoreMixin
-from errbot.utils import PLUGINS_SUBDIR, human_name_for_git_url, tail, format_timedelta, which, get_sender_username
-from errbot.repos import KNOWN_PUBLIC_REPOS
-from errbot.version import VERSION
+from .storage import StoreMixin
+from .utils import human_name_for_git_url, tail, format_timedelta, which, get_sender_username, PLUGINS_SUBDIR
+from .repos import KNOWN_PUBLIC_REPOS
+from .version import VERSION
+from .streaming import Tee
 
 
 def get_class_that_defined_method(meth):
@@ -55,23 +52,72 @@ REPOS = b'repos' if PY2 else 'repos'
 BL_PLUGINS = b'bl_plugins' if PY2 else 'bl_plugins'
 
 
+def bot_config_defaults(config):
+    if not hasattr(config, 'ACCESS_CONTROLS_DEFAULT'):
+        config.ACCESS_CONTROLS_DEFAULT = {}
+    if not hasattr(config, 'ACCESS_CONTROLS'):
+        config.ACCESS_CONTROLS = {}
+    if not hasattr(config, 'HIDE_RESTRICTED_COMMANDS'):
+        config.HIDE_RESTRICTED_COMMANDS = False
+    if not hasattr(config, 'HIDE_RESTRICTED_ACCESS'):
+        config.HIDE_RESTRICTED_ACCESS = False
+    if not hasattr(config, 'BOT_PREFIX_OPTIONAL_ON_CHAT'):
+        config.BOT_PREFIX_OPTIONAL_ON_CHAT = False
+    if not hasattr(config, 'BOT_ALT_PREFIXES'):
+        config.BOT_ALT_PREFIXES = ()
+    if not hasattr(config, 'BOT_ALT_PREFIX_SEPARATORS'):
+        config.BOT_ALT_PREFIX_SEPARATORS = ()
+    if not hasattr(config, 'BOT_ALT_PREFIX_CASEINSENSITIVE'):
+        config.BOT_ALT_PREFIX_CASEINSENSITIVE = False
+    if not hasattr(config, 'DIVERT_TO_PRIVATE'):
+        config.DIVERT_TO_PRIVATE = ()
+    if not hasattr(config, 'MESSAGE_SIZE_LIMIT'):
+        config.MESSAGE_SIZE_LIMIT = 10000  # Corresponds with what HipChat accepts
+    if not hasattr(config, 'GROUPCHAT_NICK_PREFIXED'):
+        config.GROUPCHAT_NICK_PREFIXED = False
+    if not hasattr(config, 'AUTOINSTALL_DEPS'):
+        config.AUTOINSTALL_DEPS = False
+
+
 class ErrBot(Backend, StoreMixin):
+    """ ErrBot is the layer of Err that takes care of the plugin management and dispatching
+    """
     __errdoc__ = """ Commands related to the bot administration """
     MSG_ERROR_OCCURRED = 'Computer says nooo. See logs for details.'
     MSG_UNKNOWN_COMMAND = 'Unknown command: "%(command)s". '
     startup_time = datetime.now()
 
-    def __init__(self, *args, **kwargs):
-        from config import BOT_DATA_DIR, BOT_PREFIX
+    def __init__(self, bot_config):
+        self.bot_config = bot_config
 
-        self.plugin_dir = BOT_DATA_DIR + os.sep + PLUGINS_SUBDIR
+        self.plugin_dir = os.path.join(bot_config.BOT_DATA_DIR, PLUGINS_SUBDIR)
 
-        self.open_storage(BOT_DATA_DIR + os.sep + 'core.db')
-        self.prefix = BOT_PREFIX
+        self.open_storage(os.path.join(bot_config.BOT_DATA_DIR, 'core.db'))
+        self.prefix = bot_config.BOT_PREFIX
         # be sure we have a configs entry for the plugin configurations
         if CONFIGS not in self:
             self[CONFIGS] = {}
-        super(ErrBot, self).__init__(*args, **kwargs)
+        super(ErrBot, self).__init__(bot_config)
+
+    @staticmethod
+    def _dispatch_to_plugins(method, *args, **kwargs):
+        """
+        Dispatch the given method to all active plugins.
+
+        Will catch and log any exceptions that occur.
+
+        :param method: The name of the function to dispatch.
+        :param *args: Passed to the callback function.
+        :param **kwargs: Passed to the callback function.
+        """
+        for plugin in get_all_active_plugin_objects():
+            plugin_name = plugin.__class__.__name__
+            logging.debug("Triggering {} on {}".format(method, plugin_name))
+            # noinspection PyBroadException
+            try:
+                getattr(plugin, method)(*args, **kwargs)
+            except Exception as _:
+                logging.exception("{} on {} crashed".format(method, plugin_name))
 
     # Repo management
     def get_installed_plugin_repos(self):
@@ -125,13 +171,13 @@ class ErrBot(Backend, StoreMixin):
     # this will load the plugins the admin has setup at runtime
     def update_dynamic_plugins(self):
         all_candidates, errors = update_plugin_places(
-            [self.plugin_dir + os.sep + d for d in self.get(REPOS, {}).keys()])
+            [self.plugin_dir + os.sep + d for d in self.get(REPOS, {}).keys()],
+            self.bot_config.BOT_EXTRA_PLUGIN_DIR, self.bot_config.AUTOINSTALL_DEPS)
         self.all_candidates = all_candidates
         return errors
 
     def send_message(self, mess):
         super(ErrBot, self).send_message(mess)
-        # Act only in the backend tells us that this message is OK to broadcast
         for bot in get_all_active_plugin_objects():
             # noinspection PyBroadException
             try:
@@ -139,52 +185,61 @@ class ErrBot(Backend, StoreMixin):
             except Exception as _:
                 logging.exception("Crash in a callback_botmessage handler")
 
-    def callback_message(self, conn, mess):
-        if super(ErrBot, self).callback_message(conn, mess):
+    def callback_message(self, mess):
+        if super(ErrBot, self).callback_message(mess):
             # Act only in the backend tells us that this message is OK to broadcast
             for bot in get_all_active_plugin_objects():
                 # noinspection PyBroadException
                 try:
-                    logging.debug('Callback %s' % bot)
-                    bot.callback_message(conn, mess)
+                    logging.debug('callback_message for %s' % bot.__class__.__name__)
+
+                    # backward compatibility from the time we needed conn
+                    if len(inspect.getargspec(bot.callback_message).args) == 3:
+                        logging.warning('Deprecation: Plugin %s uses the old callback_message convention, '
+                                        'now the signature should be simply def callback_message(self, mess)'
+                                        % bot.__class__.__name__)
+                        bot.callback_message(None, mess)
+                    else:
+                        bot.callback_message(mess)
                 except Exception as _:
                     logging.exception("Crash in a callback_message handler")
 
-    def callback_contact_online(self, conn, pres):
-        for bot in get_all_active_plugin_objects():
-            # noinspection PyBroadException
-            try:
-                logging.debug('Callback %s' % bot)
-                bot.callback_contact_online(conn, pres)
-            except Exception as _:
-                logging.exception('Crash in the callback_contact_online handler.')
+    def callback_presence(self, pres):
+        self._dispatch_to_plugins('callback_presence', pres)
 
-    def callback_contact_offline(self, conn, pres):
-        for bot in get_all_active_plugin_objects():
-            # noinspection PyBroadException
-            try:
-                logging.debug('Callback %s' % bot)
-                bot.callback_contact_offline(conn, pres)
-            except Exception as _:
-                logging.exception('Crash in the callback_contact_offline handler.')
+    def callback_room_joined(self, room):
+        """
+            Triggered when the bot has joined a MUC.
 
-    def callback_user_joined_chat(self, conn, pres):
-        for bot in get_all_active_plugin_objects():
-            # noinspection PyBroadException
-            try:
-                logging.debug('Callback %s' % bot)
-                bot.callback_user_joined_chat(conn, pres)
-            except Exception as _:
-                logging.exception('Crash in the callback_user_joined_chat handler.')
+            :param room:
+                An instance of :class:`~errbot.backends.base.MUCRoom`
+                representing the room that was joined.
+        """
+        self._dispatch_to_plugins('callback_room_joined', room)
 
-    def callback_user_left_chat(self, conn, pres):
-        for bot in get_all_active_plugin_objects():
-            # noinspection PyBroadException
-            try:
-                logging.debug('Callback %s' % bot)
-                bot.callback_user_left_chat(conn, pres)
-            except Exception as _:
-                logging.exception('Crash in the callback_user_left_chat handler.')
+    def callback_room_left(self, room):
+        """
+            Triggered when the bot has left a MUC.
+
+            :param room:
+                An instance of :class:`~errbot.backends.base.MUCRoom`
+                representing the room that was left.
+        """
+        self._dispatch_to_plugins('callback_room_left', room)
+
+    def callback_room_topic(self, room):
+        """
+            Triggered when the topic in a MUC changes.
+
+            :param room:
+                An instance of :class:`~errbot.backends.base.MUCRoom`
+                representing the room for which the topic changed.
+        """
+        self._dispatch_to_plugins('callback_room_topic', room)
+
+    def callback_stream(self, stream):
+        logging.info("Initiated an incoming transfer %s" % stream)
+        Tee(stream, get_all_active_plugin_objects()).start()
 
     def activate_non_started_plugins(self):
         logging.info('Activating all the plugins...')
@@ -250,10 +305,39 @@ class ErrBot(Backend, StoreMixin):
             all_plugins = get_all_plugin_names()
         return "\n".join(("• " + plugin for plugin in all_plugins))
 
-    # noinspection PyUnusedLocal
     @botcmd(template='status')
     def status(self, mess, args):
         """ If I am alive I should be able to respond to this one
+        """
+        plugins_statuses = self.status_plugins(mess, args)
+        loads = self.status_load(mess, args)
+        gc = self.status_gc(mess, args)
+
+        return {'plugins_statuses': plugins_statuses['plugins_statuses'],
+                'loads': loads['loads'],
+                'gc': gc['gc']}
+
+    @botcmd(template='status_load')
+    def status_load(self, mess, args):
+        """ shows the load status
+        """
+        try:
+            from posix import getloadavg
+            loads = getloadavg()
+        except Exception as _:
+            loads = None
+
+        return {'loads': loads}
+
+    @botcmd(template='status_gc')
+    def status_gc(self, mess, args):
+        """ shows the garbage collection details
+        """
+        return {'gc': gc.get_count()}
+
+    @botcmd(template='status_plugins')
+    def status_plugins(self, mess, args):
+        """ shows the plugin status
         """
         all_blacklisted = self.get_blacklisted_plugin()
         all_loaded = get_all_active_plugin_names()
@@ -273,14 +357,7 @@ class ErrBot(Backend, StoreMixin):
             else:
                 plugins_statuses.append(('U', name))
 
-        # noinspection PyBroadException
-        try:
-            from posix import getloadavg
-
-            loads = getloadavg()
-        except Exception as _:
-            loads = None
-        return {'plugins_statuses': plugins_statuses, 'loads': loads, 'gc': gc.get_count()}
+        return {'plugins_statuses': plugins_statuses}
 
     # noinspection PyUnusedLocal
     @botcmd
@@ -295,7 +372,7 @@ class ErrBot(Backend, StoreMixin):
         """ Return the uptime of the bot
         """
         return "I've been up for %s %s (since %s)" % (args, format_timedelta(datetime.now() - self.startup_time),
-                                                      datetime.strftime(self.startup_time, '%A, %b %d at %H:%M'))
+                                                      self.startup_time.strftime('%A, %b %d at %H:%M'))
 
     # noinspection PyUnusedLocal
     @botcmd(admin_only=True)
@@ -336,9 +413,9 @@ class ErrBot(Backend, StoreMixin):
     @botcmd(admin_only=True)
     def restart(self, mess, args):
         """ restart the bot """
-        self.send(mess.getFrom(), "Deactivating all the plugins...")
+        self.send(mess.frm, "Deactivating all the plugins...")
         deactivate_all_plugins()
-        self.send(mess.getFrom(), "Restarting")
+        self.send(mess.frm, "Restarting")
         self.shutdown()
         global_restart()
         return "I'm restarting..."
@@ -464,14 +541,14 @@ class ErrBot(Backend, StoreMixin):
         self.add_plugin_repo(human_name, args)
         errors = self.update_dynamic_plugins()
         if errors:
-            self.send(mess.getFrom(), 'Some plugins are generating errors:\n' + '\n'.join(errors),
-                      message_type=mess.getType())
+            self.send(mess.frm, 'Some plugins are generating errors:\n' + '\n'.join(errors),
+                      message_type=mess.type)
         else:
             self.send(
-                mess.getFrom(),
+                mess.frm,
                 ("A new plugin repository named %s has been installed correctly from "
                  "%s. Refreshing the plugins commands..." % (human_name, args)),
-                message_type=mess.getType()
+                message_type=mess.type
             )
         self.activate_non_started_plugins()
         return "Plugin reload done."
@@ -489,7 +566,7 @@ class ErrBot(Backend, StoreMixin):
         plugin_path = self.plugin_dir + os.sep + args
         for plugin in get_all_plugins():
             if plugin.path.startswith(plugin_path) and hasattr(plugin, 'is_activated') and plugin.is_activated:
-                self.send(mess.getFrom(), '/me is unloading plugin %s' % plugin.name)
+                self.send(mess.frm, '/me is unloading plugin %s' % plugin.name)
                 self.deactivate_plugin(plugin.name)
 
         shutil.rmtree(plugin_path)
@@ -551,7 +628,7 @@ class ErrBot(Backend, StoreMixin):
             for (name, command) in self.commands.items():
                 clazz = get_class_that_defined_method(command)
                 commands = clazz_commands.get(clazz, [])
-                if not HIDE_RESTRICTED_COMMANDS or may_access_command(name):
+                if not self.bot_config.HIDE_RESTRICTED_COMMANDS or may_access_command(name):
                     commands.append((name, command))
                     clazz_commands[clazz] = commands
 
@@ -561,9 +638,8 @@ class ErrBot(Backend, StoreMixin):
                     '\t' + self.prefix + '%s: %s' % (name.replace('_', ' ', 1),
                                                      (self.get_doc(command).strip()).split('\n', 1)[0])
                     for (name, command) in clazz_commands[clazz]
-                    if name != 'help'
-                    and not command._err_command_hidden
-                    and (not HIDE_RESTRICTED_COMMANDS or may_access_command(name))
+                    if name != 'help' and not command._err_command_hidden and
+                    (not self.bot_config.HIDE_RESTRICTED_COMMANDS or may_access_command(name))
                 ]))
             usage += '\n\n'
         elif args in (clazz.__name__ for clazz in self.get_command_classes()):
@@ -575,8 +651,8 @@ class ErrBot(Backend, StoreMixin):
                 '\t' + self.prefix + '%s: %s' % (name.replace('_', ' ', 1),
                                                  (self.get_doc(command).strip()).split('\n', 1)[0])
                 for (name, command) in commands
-                if not command._err_command_hidden
-                and (not HIDE_RESTRICTED_COMMANDS or may_access_command(name))
+                if not command._err_command_hidden and
+                (not self.bot_config.HIDE_RESTRICTED_COMMANDS or may_access_command(name))
             ]))
         else:
             return super(ErrBot, self).help(mess, '_'.join(args.strip().split(' ')))
@@ -623,7 +699,7 @@ class ErrBot(Backend, StoreMixin):
             clazz = get_class_that_defined_method(command)
             clazz = str.__module__ + '.' + clazz.__name__  # makes the fuul qualified name
             commands = clazz_commands.get(clazz, [])
-            if not HIDE_RESTRICTED_COMMANDS or self.check_command_access(mess, name)[0]:
+            if not self.bot_config.HIDE_RESTRICTED_COMMANDS or self.check_command_access(mess, name)[0]:
                 commands.append((name, command))
                 clazz_commands[clazz] = commands
 
@@ -635,11 +711,10 @@ class ErrBot(Backend, StoreMixin):
                     (command.__doc__ or '(undocumented)').strip().split('\n', 1)[0]
                 )
                 for (name, command) in clazz_commands[clazz]
-                if args is not None
-                and command.__doc__ is not None
-                and args.lower() in command.__doc__.lower()
-                and name != 'help'
-                and not command._err_command_hidden
+                if args is not None and
+                command.__doc__ is not None and
+                args.lower() in command.__doc__.lower() and
+                name != 'help' and not command._err_command_hidden
             ]))
         usage += '\n\n'
 
@@ -674,7 +749,7 @@ class ErrBot(Backend, StoreMixin):
             directories.update([self.plugin_dir + os.sep + name for name in set(args).intersection(set(repos))])
 
         for d in directories:
-            self.send(mess.getFrom(), "I am updating %s ..." % d, message_type=mess.getType())
+            self.send(mess.frm, "I am updating %s ..." % d, message_type=mess.type)
             p = subprocess.Popen([git_path, 'pull'], cwd=d, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             feedback = p.stdout.read().decode('utf-8') + '\n' + '-' * 50 + '\n'
             err = p.stderr.read().strip().decode('utf-8')
@@ -684,19 +759,19 @@ class ErrBot(Backend, StoreMixin):
             if dep_err:
                 feedback += dep_err + '\n'
             if p.wait():
-                self.send(mess.getFrom(), "Update of %s failed...\n\n%s\n\n resuming..." % (d, feedback),
-                          message_type=mess.getType())
+                self.send(mess.frm, "Update of %s failed...\n\n%s\n\n resuming..." % (d, feedback),
+                          message_type=mess.type)
             else:
-                self.send(mess.getFrom(), "Update of %s succeeded...\n\n%s\n\n" % (d, feedback),
-                          message_type=mess.getType())
+                self.send(mess.frm, "Update of %s succeeded...\n\n%s\n\n" % (d, feedback),
+                          message_type=mess.type)
                 if not core_to_update:
                     for plugin in get_all_plugins():
                         if plugin.path.startswith(d) and hasattr(plugin, 'is_activated') and plugin.is_activated:
                             name = plugin.name
-                            self.send(mess.getFrom(), '/me is reloading plugin %s' % name)
+                            self.send(mess.frm, '/me is reloading plugin %s' % name)
                             reload_plugin_by_name(plugin.name)
                             self.activate_plugin(plugin.name)
-                            self.send(mess.getFrom(), '%s reloaded and reactivated' % name)
+                            self.send(mess.frm, '%s reloaded and reactivated' % name)
         if core_to_update:
             self.restart(mess, '')
             return "You have updated the core, I need to restart."
@@ -767,9 +842,8 @@ class ErrBot(Backend, StoreMixin):
         n = 40
         if args.isdigit():
             n = int(args)
-        from config import BOT_LOG_FILE
 
-        if BOT_LOG_FILE:
-            with open(BOT_LOG_FILE, 'r') as f:
+        if self.bot_config.BOT_LOG_FILE:
+            with open(self.bot_config.BOT_LOG_FILE, 'r') as f:
                 return tail(f, n)
         return 'No log is configured, please define BOT_LOG_FILE in config.py'
