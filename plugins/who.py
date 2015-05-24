@@ -29,8 +29,10 @@ class EveWho(BotPlugin):
         if not data:
             return '[0, 0]'
 
-        kills = data["totals"]["countDestroyed"]
-        lost = data["totals"]["countLost"]
+        #kills = data["totals"]["countDestroyed"]
+        #lost = data["totals"]["countLost"]
+        kills = data["shipsDestroyed"]
+        lost = data["shipsLost"]
         return '[{}, {}]'.format(str(kills), str(lost))
 
     @staticmethod
