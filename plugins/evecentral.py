@@ -33,7 +33,7 @@ class EveCentral(BotPlugin):
         if not isinstance(pricelookup.item, str):
             #special case for plex since its easily the most common search
             if pricelookup.item[0].lower() == 'plex':
-                itemstoprice = self.get_type_id(self, '30 Day')
+                itemstoprice = self.get_type_id(self, 'license')
             else:
                 itemstoprice = self.get_type_id(self, ' '.join(pricelookup.item))
         else:
