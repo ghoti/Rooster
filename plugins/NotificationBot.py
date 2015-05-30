@@ -141,6 +141,7 @@ class NotificationBot(BotPlugin):
             #alliance = self.getname(sbu[id]['allianceID'])[0][sbu[id]['allianceID']]
         message = 'An SBU has been anchored in {0} by a member of {1}/{2}!!!'.format(system, corp, alliance)
         self.send('leadership@conference.j4lp.com', message, message_type="groupchat")
+        self.send('alliance@conference.j4lp.com', message, message_type="groupchat")
 
     def posfuel(self, id, toon):
         #allianceID: 99002172 corpID: 98114328 moonID: 40302497 solarSystemID: 30004776 typeID: 20063 wants: - quantity: 189 typeID: 4312
@@ -189,8 +190,8 @@ class NotificationBot(BotPlugin):
                                                                                   float(pos[id]['hullValue'])*100)
         self.send('leadership@conference.j4lp.com', message, message_type='groupchat')
         self.send('leadership@conference.j4lp.com', message2, message_type='groupchat')
-        self.send('bootcamp@conference.j4lp.com', message, message_type='groupchat')
-        self.send('bootcamp@conference.j4lp.com', message2, message_type='groupchat')
+        self.send('alliance@conference.j4lp.com', message, message_type='groupchat')
+        self.send('alliance@conference.j4lp.com', message2, message_type='groupchat')
 
     def tcualert(self, id, toon):
         logging.info("TCU Alert")
@@ -208,7 +209,7 @@ class NotificationBot(BotPlugin):
             alliance = None
         message = 'The TCU at {0} was shot by {1}/{2}/{3}!'.format(system, who[0], corp, alliance)
         self.send('leadership@conference.j4lp.com', message, message_type="groupchat")
-        self.send('bootcamp@conference.j4lp.com', message, message_type="groupchat")
+        self.send('alliance@conference.j4lp.com', message, message_type="groupchat")
 
     def sbushot(self, id, toon):
         logging.info("SBU Shot Alert")
@@ -227,7 +228,7 @@ class NotificationBot(BotPlugin):
             alliance = None
         message = 'An SBU at {0} was shot by {1}/{2}/{3}!'.format(system, who[0], corp, alliance)
         self.send('leadership@conference.j4lp.com', message, message_type="groupchat")
-        self.send('bootcamp@conference.j4lp.com', message, message_type="groupchat")
+        self.send('alliance@conference.j4lp.com', message, message_type="groupchat")
 
     def ihubalert(self, id, toon):
         logging.info("IHUB alert")
@@ -247,7 +248,7 @@ class NotificationBot(BotPlugin):
             alliance = None
         message = 'The iHub at {0} was shot by {1}/{2}/{3}!'.format(system, who[0], corp, alliance)
         self.send("leadership@conference.j4lp.com", message, message_type="groupchat")
-        self.send("bootcamp@conference.j4lp.com", message, message_type="groupchat")
+        self.send("alliance@conference.j4lp.com", message, message_type="groupchat")
 
     def pocoalert(self, id, toon):
         logging.info("POCO Alert")
@@ -260,13 +261,13 @@ class NotificationBot(BotPlugin):
         planet = planet.fetchone()[0]
         message = '{0} has shot the POCO we own sitting on {1}!'.format(aggressor[0], planet)
         self.send('leadership@conference.j4lp.com', message, message_type="groupchat")
-        self.send('bootcamp@conference.j4lp.com', message, message_type="groupchat")
+        self.send('alliance@conference.j4lp.com', message, message_type="groupchat")
 
     def pocorf(self, id, toon):
         logging.info("POCO RF Alert")
         message = 'Someone reinforced a POCO we own!'
         self.send('leadership@conference.j4lp.com', message, message_type="groupchat")
-        self.send('bootcamp@conference.j4lp.com', message, message_type="groupchat")
+        self.send('alliance@conference.j4lp.com', message, message_type="groupchat")
 
     def fwwarn(self, id, toon):
         logging.info("FW Warning")
@@ -305,9 +306,11 @@ class NotificationBot(BotPlugin):
 
     def getalliance(self, toon, char):
         #api = evelink.api.API(api_key=(toon.keyid, toon.vcode))
-        alliance = evelink.eve.EVE()
+        #alliance = evelink.eve.EVE()
         #return alliance.affiliations_for_character(char_id=int(char))[0]['alliance']['name']
-        return alliance.affiliations_for_character(char_id=char)[0]['name']
+        #return alliance.affiliations_for_character(char_id=char)[0]['name']
+        alliance = evelink.eve.EVE()
+        return alliance.affiliations_for_character(char).result['alliance']['name']
 
     def getalliancefromid(self, toon, id):
         alliance = evelink.eve.EVE()
