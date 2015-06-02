@@ -184,7 +184,7 @@ class NotificationBot(BotPlugin):
         who = self.getname(pos[id]['aggressorID'])
         corp = self.getcorp(toon, pos[id]['aggressorCorpID'])
         try:
-            alliance = self.getalliancefromid(toon, pos[id]['aggressorID'])
+            alliance = self.getalliancefromid(toon, pos[id]['aggressorAllianceID'])
         except:
             alliance = None
         message = 'The POS ({0}) at {1} was shot by {2}/{3}/{4}!'.format(what, moon, who[0], corp, alliance)
