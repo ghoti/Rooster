@@ -103,7 +103,10 @@ class NotificationBot(BotPlugin):
         thing = c.execute('select typeName from invTypes where typeID={0}'.format(anchor[id]['typeID']))
         thing = thing.fetchone()[0]
         #who = self.getcorp(toon, anchor[id]['corpID'])
-        who = self.getalliance(toon, anchor[id]['allianceID'])
+        try:
+            who = self.getalliancefromid(toon, anchor[id]['allianceID'])
+        except:
+            who = self.getcorp(toon, anchor[id]['corpID'])
         message = '{0} was anchored on {1} by {2}!'.format(thing, moon, who)
         self.send('leadership@conference.j4lp.com', message, message_type="groupchat")
         self.send('bootcamp@conference.j4lp.com', message, message_type="groupchat")
@@ -181,7 +184,7 @@ class NotificationBot(BotPlugin):
         who = self.getname(pos[id]['aggressorID'])
         corp = self.getcorp(toon, pos[id]['aggressorCorpID'])
         try:
-            alliance = self.getalliance(toon, pos[id]['aggressorID'])
+            alliance = self.getalliancefromid(toon, pos[id]['aggressorID'])
         except:
             alliance = None
         message = 'The POS ({0}) at {1} was shot by {2}/{3}/{4}!'.format(what, moon, who[0], corp, alliance)
@@ -314,7 +317,7 @@ class NotificationBot(BotPlugin):
 
     def getalliancefromid(self, toon, id):
         alliance = evelink.eve.EVE()
-        return alliance.alliances
+        return alliance.character_names_from_ids(id_list=(id,)).result[id]
 
 
     def runner(self):
