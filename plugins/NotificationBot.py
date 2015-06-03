@@ -62,6 +62,7 @@ class NotificationBot(BotPlugin):
                 94:self.pocorf,
                 96:self.fwwarn,
                 97:self.fwkick,
+                147:self.entosisservice,
                 #111:self.bounty,
                 #128:self.joinfweddit #join note is same as app note with different id hue
             }
@@ -288,6 +289,18 @@ class NotificationBot(BotPlugin):
         name = self.getname(app[id]['charID'])
         corp = self.getcorp(toon, app[id]['corpID'])
         message = '{0} has joined {1}!'.format(name[0], corp)
+
+    def entosisservice(self, id, toon):
+        logging.info("Service Entosis Alert")
+        #<![CDATA[ solarSystemID: 30004037 structureTypeID: 28155 ]]>
+        service = self.gettext(id, toon)
+        conn = sqlite3.connect(EVESTATICDATADUMP)
+        c = conn.cursor()
+        system = c.execute('select itemName from mapDenormalize where itemID={0}'.format(service[id]['solarSystemID']))
+        system = system.fetchone()[0]
+        message = 'A station service in {} is being fozziewanded by hostiles!'.format(system)
+        self.send('alliance@conference.j4lp.com', message, message_type="groupchat")
+        self.send('leadership@conference.j4lp.com', message, message_type="groupchat")
 
     def gettext(self,notificationid, toon):
         api = evelink.api.API(api_key=(toon.keyid, toon.vcode))
