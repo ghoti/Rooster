@@ -63,6 +63,7 @@ class NotificationBot(BotPlugin):
                 96:self.fwwarn,
                 97:self.fwkick,
                 147:self.entosisservice,
+                149:self.servicedisabled,
                 #111:self.bounty,
                 #128:self.joinfweddit #join note is same as app note with different id hue
             }
@@ -298,7 +299,22 @@ class NotificationBot(BotPlugin):
         c = conn.cursor()
         system = c.execute('select itemName from mapDenormalize where itemID={0}'.format(service[id]['solarSystemID']))
         system = system.fetchone()[0]
-        message = 'A station service in {} is being fozziewanded by hostiles!'.format(system)
+        what = c.execute('select typeName from invTypes where typeID={}'.format(service[id]['structureTypeID']))
+        what = what.fetchone()[0]
+        message = 'The {} in {} is being fozziewanded by hostiles!'.format(what, system)
+        self.send('alliance@conference.j4lp.com', message, message_type="groupchat")
+        self.send('leadership@conference.j4lp.com', message, message_type="groupchat")
+
+    def servicedisabled(self, id, toon):
+        logging.info("Service Disabled Alert")
+        service = self.gettext(id, toon)
+        conn = sqlite3.connect(EVESTATICDATADUMP)
+        c = conn.cursor()
+        system = c.execute('select itemName from mapDenormalize where itemID={0}'.format(service[id]['solarSystemID']))
+        system = system.fetchone()[0]
+        what = c.execute('select typeName from invTypes where typeID={}'.format(service[id]['structureTypeID']))
+        what = what.fetchone()[0]
+        message = 'The {} in {} has been captured by hostiles!'.format(what, system)
         self.send('alliance@conference.j4lp.com', message, message_type="groupchat")
         self.send('leadership@conference.j4lp.com', message, message_type="groupchat")
 
