@@ -1,62 +1,35 @@
 from errbot import BotPlugin, botcmd
-from errbot.builtins.webserver import webhook
-
 
 class Ping(BotPlugin):
 
     """A Ping Group function for Err"""
     min_err_version = '1.6.0'  # Optional, but recommended
-    #max_err_version = '3.0.0'  # Optional, but recommended
 
-    @botcmd(split_args_with="||")
-    def ping_set(self, mess, args):
-        """Create/Update a group."""
-        
-        group_str = str(args[0])
-        group_tuple = group_str.split(" ", 1)
-        
-        if len(group_tuple) > 1:
-            group, text = group_tuple
-            group = group.lower()
-            
-            old_value = self[group]
-            self[group] = text
-            if old_value:
-                return "Updated group '%s', previous value was: %s" % (group, old_value,)
-            else:
-                return "Created group '%s'." % (group,)
-        else:
-            group = group_tuple[0]
-            group = group.lower()
-            if group in self.keys():
-                del self[group]
-                return "Deleted group %s" % group
+    # replacement system for the shelf bullshit
+    HR = ('nivlac_hita', 'shadowozera1', 'chainsaw_mcginny')
+    Leadership = ('rina_kondur', 'chainsaw_mcginny', 'alistair_croup', 'ipoopedbad_ernaga')
+    admin = ('vadrin_hegirin', 'chainsaw_mcginny')
+    user_groups = {'HR': HR, 'Leadership': Leadership, 'admin': admin}
         
     @botcmd(split_args_with=None)
     def ping(self, mess, args):
         """Ping a specified group"""
 
         if not args:
-            return "No Group to Ping, valid groups are {}".format(", ".join(sorted(self.keys())),)
+            return "No Group to Ping, valid groups are {}".format(", ".join(self.user_groups))
         
-        group = str(args[0])
-        group = group.lower()
-        
-        group_text = self[group]
-        
-        if group_text is not None:
-            return group_text
+        if args in self.user_groups:
+            return ", ".join(self.user_groups[args])
         else:
-            return "No such group, valid groups are: %s" % (", ".join(sorted(self.keys())),)
+            return "No such group, valid groups are: %s" % (", ".join(self.user_groups))
             
     @botcmd(split_args_with=None)
     def ping_groups(self, mess, args):
         """Show the groups that can be pinged"""
         
-        groups = self.keys()
-        
-        return ", ".join(sorted(groups))
+        return ", ".join(self.user_groups)
 
+    # Leave this in I guess? I don't really know if it's used still.
     def __getitem__(self, key):
         try:
             return super(Ping, self).__getitem__(key)
