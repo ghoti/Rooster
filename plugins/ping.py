@@ -1,7 +1,7 @@
 from errbot import BotPlugin, botcmd
 
-class Ping(BotPlugin):
 
+class Ping(BotPlugin):
     """A Ping Group function for Err"""
     min_err_version = '1.6.0'  # Optional, but recommended
 
@@ -16,7 +16,7 @@ class Ping(BotPlugin):
 
     user_groups = {'hr': hr, 'fweight': fweight, 'leadership': leadership,
                    'admin': admin, 'gas': gas, 'chinslaw': chinslaw}
-        
+
     @botcmd(split_args_with=None)
     def ping(self, mess, args):
         """Ping a specified group"""
@@ -25,16 +25,16 @@ class Ping(BotPlugin):
             return "No Group to Ping, valid groups are {}".format(", ".join(self.user_groups))
 
         qry = args.lowercase
-        
+
         if qry in self.user_groups:
-            return ", ".join(self.user_groups[args])
+            return " ".join(self.user_groups[args])
         else:
             return "No such group, valid groups are: %s" % (", ".join(self.user_groups))
-            
+
     @botcmd(split_args_with=None)
     def ping_groups(self, mess, args):
         """Show the groups that can be pinged"""
-        
+
         return ", ".join(self.user_groups)
 
     # Leave this in I guess? I don't really know if it's used still.
