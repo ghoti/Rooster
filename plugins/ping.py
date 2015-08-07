@@ -5,11 +5,17 @@ class Ping(BotPlugin):
     """A Ping Group function for Err"""
     min_err_version = '1.6.0'  # Optional, but recommended
 
-    # replacement system for the shelf bullshit
-    HR = ('nivlac_hita', 'shadowozera1', 'chainsaw_mcginny')
-    Leadership = ('rina_kondur', 'chainsaw_mcginny', 'alistair_croup', 'ipoopedbad_ernaga')
+    # replacement system for the shelf bullshit.
+    # Yes, it's a hack, yes, I will put in a patch for a more decent system (pings.txt) soon. I hope.
+    hr = ('nivlac_hita', 'shadowozera1', 'chainsaw_mcginny', 'wocks_zhar')
+    fweight = ('umnumun', 'umnumun_work', 'Inspector Gair')
+    leadership = ('rina_kondur', 'chainsaw_mcginny', 'alistair_croup', 'ipoopedbad_ernaga')
     admin = ('vadrin_hegirin', 'chainsaw_mcginny')
-    user_groups = {'HR': HR, 'Leadership': Leadership, 'admin': admin}
+    gas = (':jihad:', " ")
+    chinslaw = (':godwinning:', " ")
+
+    user_groups = {'hr': hr, 'fweight': fweight, 'leadership': leadership,
+                   'admin': admin, 'gas': gas, 'chinslaw': chinslaw}
         
     @botcmd(split_args_with=None)
     def ping(self, mess, args):
@@ -17,8 +23,10 @@ class Ping(BotPlugin):
 
         if not args:
             return "No Group to Ping, valid groups are {}".format(", ".join(self.user_groups))
+
+        qry = args.lowercase
         
-        if args in self.user_groups:
+        if qry in self.user_groups:
             return ", ".join(self.user_groups[args])
         else:
             return "No such group, valid groups are: %s" % (", ".join(self.user_groups))
