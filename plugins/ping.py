@@ -14,7 +14,7 @@ class Ping(BotPlugin):
 
     def __init__(self):
         super().__init__()
-        self.ping_groups = self.init_groups()
+        self.user_groups = self.init_groups()
 
     @botcmd(split_args_with=None)
     def ping(self, mess, args):
@@ -43,7 +43,7 @@ class Ping(BotPlugin):
          - Name is separated from content with a fat, right-facing arrow (=>)
          - lines seperated with \n.
 
-         Will (re)make the file with default groups if the file is missing.
+         Will (re)make the file with default groups if the file is missing, then call itself again.
 
         :return: dictionary containing the groups in self.ping_groups_file
         """
@@ -70,8 +70,7 @@ class Ping(BotPlugin):
             with open(self.ping_groups_file, 'x') as f:
                 f.write(s)
 
-    user_groups = {'hr': hr, 'fweight': fweight, 'leadership': leadership,
-                   'admin': admin, 'gas': gas, 'chinslaw': chinslaw}
+            self.init_groups()
 
     # Leave this in I guess? I don't really know if it's used still.
     def __getitem__(self, key):
