@@ -10,15 +10,7 @@ class Ping(BotPlugin):
 
     # replacement system for the shelf bullshit.
     # Yes, it's a hack, yes, I will put in a patch for a more decent system (pings.txt) soon. I hope.
-    hr = ('nivlac_hita', 'shadowozera1', 'chainsaw_mcginny', 'wocks_zhar')
-    fweight = ('umnumun', 'umnumun_work', 'Inspector Gair')
-    leadership = ('rina_kondur', 'chainsaw_mcginny', 'alistair_croup', 'ipoopedbad_ernaga')
-    admin = ('vadrin_hegirin', 'chainsaw_mcginny')
-    gas = (':jihad:', " ")
-    chinslaw = (':godwinning:', " ")
 
-    user_groups = {'hr': hr, 'fweight': fweight, 'leadership': leadership,
-                   'admin': admin, 'gas': gas, 'chinslaw': chinslaw}
 
     def __init__(self):
         super().__init__()
@@ -51,6 +43,8 @@ class Ping(BotPlugin):
          - Name is separated from content with a fat, right-facing arrow (=>)
          - lines seperated with \n.
 
+         Will (re)make the file with default groups if the file is missing.
+
         :return: dictionary containing the groups in self.ping_groups_file
         """
         if isfile(self.ping_groups_file):
@@ -64,8 +58,20 @@ class Ping(BotPlugin):
 
             return group_dict
         else:
-            raise FileNotFoundError
             # TODO implement default groups.
+
+            s = ("hr => nivlac_hita, shadowozera1, chainsaw_mcginny, wocks_zhar\n"
+                 "fweight => umnumun, umnumun_work, Inspector Gair\n"
+                 "leadership => rina_kondur, chainsaw_mcginny, alistair_croup, ipoopedbad_ernaga\n"
+                 "admin => vadrin_hegirin, chainsaw_mcginny\n"
+                 "gas => :jihad:\n"
+                 ":chinslaw => godwinning:\n")
+
+            with open(self.ping_groups_file, 'x') as f:
+                f.write(s)
+
+    user_groups = {'hr': hr, 'fweight': fweight, 'leadership': leadership,
+                   'admin': admin, 'gas': gas, 'chinslaw': chinslaw}
 
     # Leave this in I guess? I don't really know if it's used still.
     def __getitem__(self, key):
