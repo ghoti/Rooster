@@ -8,10 +8,6 @@ class Ping(BotPlugin):
 
     ping_groups_file = 'pings.txt'
 
-    # replacement system for the shelf bullshit.
-    # Yes, it's a hack, yes, I will put in a patch for a more decent system (pings.txt) soon. I hope.
-
-
     def __init__(self):
         super().__init__()
         self.user_groups = self.init_groups()
@@ -41,10 +37,11 @@ class Ping(BotPlugin):
         Reads groups from file, format for the file is:
          - one group per line,
          - Name is separated from content with a fat, right-facing arrow (=>)
-         - lines seperated with \n.
+         - lines separated with \n.
 
          Will (re)make the file with default groups if the file is missing, then call itself again.
 
+        Since: 2015-08-07
         :return: dictionary containing the groups in self.ping_groups_file
         """
         if isfile(self.ping_groups_file):
@@ -58,14 +55,12 @@ class Ping(BotPlugin):
 
             return group_dict
         else:
-            # TODO implement default groups.
-
-            s = ("hr => nivlac_hita, shadowozera1, chainsaw_mcginny, wocks_zhar\n"
+            s = ("hr => shadowozera1, chainsaw_mcginny, wocks_zhar\n"
                  "fweight => umnumun, umnumun_work, Inspector Gair\n"
                  "leadership => rina_kondur, chainsaw_mcginny, alistair_croup, ipoopedbad_ernaga\n"
                  "admin => vadrin_hegirin, chainsaw_mcginny\n"
                  "gas => :jihad:\n"
-                 ":chinslaw => godwinning:\n")
+                 "chinslaw => :godwinning:\n")
 
             with open(self.ping_groups_file, 'x') as f:
                 f.write(s)
