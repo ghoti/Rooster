@@ -10,10 +10,14 @@ class Ping(BotPlugin):
 
     def __init__(self):
         super().__init__()
+
         try:
             self.user_groups = self.init_groups()
         except FileNotFoundError:
             self.user_groups = self.init_groups()
+
+    def __del__(self):
+        self.ping_write()
 
     # Bot Commands
     # =========================================================================
@@ -29,16 +33,30 @@ class Ping(BotPlugin):
         qry = args.lowercase
 
         if qry in self.user_groups:
-            return " ".join(self.user_groups[args])
+            return " ".join(self.user_groups[qry])
         else:
-            return "No such group, valid groups are: %s" % \
-                   (", ".join(self.user_groups))
+            return "No such group, valid groups are: {}" \
+                   .format(", ".join(self.user_groups))
 
     @botcmd(split_args_with=None)
     def ping_groups(self, mess, args):
         """Show the groups that can be pinged"""
 
         return ", ".join(self.user_groups)
+
+    @botcmd(split_args_with=None)
+    def ping_set(self, mess, args):
+        if not args:
+            return "Can't set nothing to nothing. Fix it, dumdum."
+
+        qry = args.split(" => ")
+
+        if not qry[1]:
+            return "Use correct formatting. Format is: " \
+                   "!ping_set group => list of people"
+
+        self.ping_groups[qry[0]] = qry[1]
+        return "Setting {} to {}...".format(qry[0], qry[1])
 
     @botcmd(split_args_with=None)
     def ping_write(self, mess, args):
@@ -52,6 +70,10 @@ class Ping(BotPlugin):
             for key, value in self.ping_groups:
                 f.write(key + " => " + value + "\n")
 
+    @botcmd(split_args_with=None)
+    def poop(self, mess, args):
+        return "You and poop are friends."
+
     # Internal auxiliary methods.
     # =========================================================================
 
@@ -63,7 +85,8 @@ class Ping(BotPlugin):
          - lines separated with \n.
 
          Will (re)make the file with default groups if the file is missing,
-         then call itself again.
+         but raise a FileNotFoundException, so it can be caught and the method
+         called again.
 
         Since: 2015-08-07
         :return: dictionary containing the groups in self.ping_groups_file
@@ -91,7 +114,6 @@ class Ping(BotPlugin):
                 f.write(s)
 
             raise FileNotFoundError
-
 
     # Leave this in I guess? I don't really know if it's used still.
     def __getitem__(self, key):
