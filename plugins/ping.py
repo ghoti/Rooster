@@ -1,9 +1,12 @@
+from os.path import isfile
 from errbot import BotPlugin, botcmd
 
 
 class Ping(BotPlugin):
     """A Ping Group function for Err"""
     min_err_version = '1.6.0'  # Optional, but recommended
+
+    ping_groups_file = 'pings.txt'
 
     # replacement system for the shelf bullshit.
     # Yes, it's a hack, yes, I will put in a patch for a more decent system (pings.txt) soon. I hope.
@@ -16,6 +19,10 @@ class Ping(BotPlugin):
 
     user_groups = {'hr': hr, 'fweight': fweight, 'leadership': leadership,
                    'admin': admin, 'gas': gas, 'chinslaw': chinslaw}
+
+    def __init__(self):
+        super().__init__()
+        self.ping_groups = self.init_groups()
 
     @botcmd(split_args_with=None)
     def ping(self, mess, args):
@@ -36,6 +43,29 @@ class Ping(BotPlugin):
         """Show the groups that can be pinged"""
 
         return ", ".join(self.user_groups)
+
+    def init_groups(self):
+        """
+        Reads groups from file, format for the file is:
+         - one group per line,
+         - Name is separated from content with a fat, right-facing arrow (=>)
+         - lines seperated with \n.
+
+        :return: dictionary containing the groups in self.ping_groups_file
+        """
+        if isfile(self.ping_groups_file):
+            with open(self.ping_groups_file) as f:
+                raw_groups = [lines for lines in f]
+
+            group_dict = {}
+            for group in raw_groups:
+                for key, value in group.split(" => "):
+                    group_dict[key] = value
+
+            return group_dict
+        else:
+            raise FileNotFoundError
+            # TODO implement default groups.
 
     # Leave this in I guess? I don't really know if it's used still.
     def __getitem__(self, key):
