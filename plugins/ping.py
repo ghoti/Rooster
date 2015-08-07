@@ -10,7 +10,10 @@ class Ping(BotPlugin):
 
     def __init__(self):
         super().__init__()
-        self.user_groups = self.init_groups()
+        try:
+            self.user_groups = self.init_groups()
+        except FileNotFoundError:
+            self.user_groups = self.init_groups()
 
     @botcmd(split_args_with=None)
     def ping(self, mess, args):
@@ -65,7 +68,16 @@ class Ping(BotPlugin):
             with open(self.ping_groups_file, 'x') as f:
                 f.write(s)
 
-            self.init_groups()
+            raise FileNotFoundError
+
+    @botcmd(split_args_with=None)
+    def ping_write(self, mess, args):
+        """
+        Writes the contents of self.ping_groups to self.ping_group_file, serializing any changes made to it.
+        """
+        with open(self.ping_groups_file, 'w') as f:
+            for key, value in self.ping_groups:
+                f.write(key + " => " + value + "\n")
 
     # Leave this in I guess? I don't really know if it's used still.
     def __getitem__(self, key):
