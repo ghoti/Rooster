@@ -7,15 +7,11 @@ class Ping(BotPlugin):
     """A Ping Group function for Err"""
     min_err_version = '1.6.0'  # Optional, but recommended
 
-    ping_groups_file = 'pings.txt'
+    ping_groups_file = 'pings.json'
 
     def __init__(self):
         super().__init__()
-
-        try:
-            self.user_groups = self.init_groups()
-        except FileNotFoundError:
-            self.user_groups = self.init_groups()
+        self.ping_groups = self.init_groups()
 
     def __del__(self):
         self.ping_write()
@@ -37,7 +33,7 @@ class Ping(BotPlugin):
             return " ".join(self.user_groups[qry])
         else:
             return "No such group, valid groups are: {}" \
-                   .format(", ".join(self.user_groups))
+                .format(", ".join(self.user_groups))
 
     @botcmd(split_args_with=None)
     def ping_groups(self, mess, args):
@@ -50,14 +46,18 @@ class Ping(BotPlugin):
         if not args:
             return "Can't set nothing to nothing. Fix it, dumdum."
 
-        qry = args.split(" => ")
+        qry = str(args)
+        sep = ' => '
 
-        if not qry[1]:
-            return "Use correct formatting. Format is: " \
-                   "!ping_set group => list of people"
+        if sep in qry:
+            raw_group = qry[:qry.find(sep)]
+            raw_content = qry[qry.find(sep) + len(sep):]
 
-        self.ping_groups[qry[0]] = qry[1]
-        return "Setting {} to {}...".format(qry[0], qry[1])
+            self.ping_groups[raw_group] = raw_content
+            return "Setting {} to {}...".format(raw_group, raw_content)
+
+        else:
+            return "Correct format is: group{}content".format(sep)
 
     @botcmd(split_args_with=None)
     def ping_write(self, mess, args):
