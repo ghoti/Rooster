@@ -25,23 +25,23 @@ class Ping(BotPlugin):
 
         if not args:
             return "No Group to Ping, valid groups are {}" \
-                .format(", ".join(self.user_groups))
+                .format(", ".join(self.ping_groups))
 
         qry = args.lowercase
 
-        if qry in self.user_groups:
-            return " ".join(self.user_groups[qry])
+        if qry in self.ping_groups:
+            return " ".join(self.ping_groups[qry])
         else:
             return "No such group, valid groups are: {}" \
-                .format(", ".join(self.user_groups))
+                .format(", ".join(self.ping_groups))
 
     @botcmd(split_args_with=None)
     def ping_groups(self, mess, args):
         """Show the groups that can be pinged"""
 
-        return ", ".join(self.user_groups)
+        return ", ".join(self.ping_groups)
 
-    @botcmd(split_args_with=None)
+    @botcmd(split_args_with=None, hidden=True)
     def ping_set(self, mess, args):
         """
         Changes the dictionary in which the ping groups are contained, but does
