@@ -43,6 +43,14 @@ class Ping(BotPlugin):
 
     @botcmd(split_args_with=None)
     def ping_set(self, mess, args):
+        """
+        Changes the dictionary in which the ping groups are contained, but does
+        not cause a write, which has to be triggered manually or by restarting
+        the bot (self.ping_write is included in the destructor)
+        :param args: Everything after !ping_set
+        :return: Output indicating the status change, the dictionary is modified
+        as side effect.
+        """
         if not args:
             return "Can't set nothing to nothing. Fix it, dumdum."
 
