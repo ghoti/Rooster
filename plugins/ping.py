@@ -1,5 +1,6 @@
 from os.path import isfile
 from errbot import BotPlugin, botcmd
+import json
 
 
 class Ping(BotPlugin):
@@ -67,8 +68,7 @@ class Ping(BotPlugin):
         Since: 2015-08-07
         """
         with open(self.ping_groups_file, 'w') as f:
-            for key, value in self.ping_groups:
-                f.write(key + " => " + value + "\n")
+            json.dump(self.ping_groups, f, indent=4)
 
     @botcmd(split_args_with=None)
     def poop(self, mess, args):
@@ -79,41 +79,31 @@ class Ping(BotPlugin):
 
     def init_groups(self):
         """
-        Reads groups from file, format for the file is:
-         - one group per line,
-         - Name is separated from content with a fat, right-facing arrow (=>)
-         - lines separated with \n.
+        Reads groups from file, format for the file is json.
 
-         Will (re)make the file with default groups if the file is missing,
-         but raise a FileNotFoundException, so it can be caught and the method
-         called again.
+        Will (re)make the file with default groups if the file is missing,
+        and return the dict.
 
-        Since: 2015-08-07
+        Since: 2015-08-08
         :return: dictionary containing the groups in self.ping_groups_file
         """
         if isfile(self.ping_groups_file):
             with open(self.ping_groups_file) as f:
-                raw_groups = [lines for lines in f]
-
-            group_dict = {}
-            for group in raw_groups:
-                for key, value in group.split(" => "):
-                    group_dict[key] = value
+                group_dict = json.load(f)
 
             return group_dict
+
         else:
-            s = ("hr => shadowozera1, chainsaw_mcginny, wocks_zhar\n"
-                 "fweight => umnumun, umnumun_work, Inspector Gair\n"
-                 "leadership => rina_kondur, chainsaw_mcginny, alistair_croup, "
-                 "ipoopedbad_ernaga\n"
-                 "admin => vadrin_hegirin, chainsaw_mcginny\n"
-                 "gas => :jihad:\n"
-                 "chinslaw => :godwinning:\n")
+            group_dict = {"hr": "shadowozera1, chainsaw_mcginny, wocks_zhar",
+                          "fweight": "umnumun, umnumun_work, Inspector Gair",
+                          "leadership": "rina_kondur, chainsaw_mcginny,"
+                                        " alistair_croup, ipoopedbad_ernaga",
+                          "admin": "vadrin_hegirin, chainsaw_mcginny",
+                          "gas": ":jihad:",
+                          "chinslaw": ":godwinning:"}
 
-            with open(self.ping_groups_file, 'x') as f:
-                f.write(s)
-
-            raise FileNotFoundError
+            self.ping_write()
+            return group_dict
 
     # Leave this in I guess? I don't really know if it's used still.
     def __getitem__(self, key):
