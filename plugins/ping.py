@@ -11,10 +11,10 @@ class Ping(BotPlugin):
 
     def __init__(self):
         super().__init__()
-        self.ping_groups = self.init_groups()
+        self.init_groups()
 
-    def __del__(self):
-        self.ping_write(None, None)
+    #def __del__(self):
+    #    self.ping_write(None, None)
 
     # Bot Commands
     # =========================================================================
@@ -113,7 +113,7 @@ class Ping(BotPlugin):
             return group_dict
 
         else:
-            group_dict = {"hr": "shadowozera1, chainsaw_mcginny, wocks_zhar",
+            self.ping_groups = {"hr": "shadowozera1, chainsaw_mcginny, wocks_zhar",
                           "fweight": "umnumun, umnumun_work, Inspector Gair",
                           "leadership": "rina_kondur, chainsaw_mcginny,"
                                         " alistair_croup, ipoopedbad_ernaga",
@@ -122,7 +122,6 @@ class Ping(BotPlugin):
                           "chinslaw": ":godwinning:"}
 
             self.ping_write(None, None)
-            return group_dict
 
     # Leave this in I guess? I don't really know if it's used still.
     def __getitem__(self, key):
