@@ -110,7 +110,7 @@ class Ping(BotPlugin):
             with open(self.ping_groups_file) as f:
                 group_dict = json.load(f)
 
-            return group_dict
+            self.ping_groups = group_dict
 
         else:
             self.ping_groups = {"hr": "shadowozera1, chainsaw_mcginny, wocks_zhar",
