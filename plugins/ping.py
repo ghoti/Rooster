@@ -44,9 +44,8 @@ class Ping(BotPlugin):
     @botcmd(split_args_with=None, hidden=True)
     def ping_set(self, mess, args):
         """
-        Changes the dictionary in which the ping groups are contained, but does
-        not cause a write, which has to be triggered manually or by restarting
-        the bot (self.ping_write is included in the destructor)
+        Changes the dictionary in which the ping groups are contained, and
+        causes a write to file, serializing the changes immediately.
         :param args: Everything after !ping_set
         :return: Output indicating the status change, the dictionary is modified
         as side effect.
@@ -62,6 +61,7 @@ class Ping(BotPlugin):
             raw_content = qry[qry.find(sep) + len(sep):]
 
             self.ping_groups[raw_group] = raw_content
+            self.ping_write()
             return "Setting {} to {}...".format(raw_group, raw_content)
 
         else:
