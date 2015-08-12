@@ -14,7 +14,7 @@ class Ping(BotPlugin):
         self.ping_groups = self.init_groups()
 
     def __del__(self):
-        self.ping_write()
+        self.ping_write(None, None)
 
     # Bot Commands
     # =========================================================================
@@ -27,10 +27,11 @@ class Ping(BotPlugin):
             return "No Group to Ping, valid groups are {}" \
                 .format(", ".join(self.ping_groups))
 
-        qry = args.lowercase
+        qry = ' '.join(args).lower().strip()
 
         if qry in self.ping_groups:
-            return " ".join(self.ping_groups[qry])
+            #return " ".join(self.ping_groups[qry])
+            return self.ping_groups[qry]
         else:
             return "No such group, valid groups are: {}" \
                 .format(", ".join(self.ping_groups))
@@ -41,7 +42,7 @@ class Ping(BotPlugin):
 
         return ", ".join(self.ping_groups)
 
-    @botcmd(split_args_with=None, hidden=True)
+    @botcmd(split_args_with='=>', hidden=True)
     def ping_set(self, mess, args):
         """
         Changes the dictionary in which the ping groups are contained, and
@@ -53,19 +54,29 @@ class Ping(BotPlugin):
         if not args:
             return "Can't set nothing to nothing. Fix it, dumdum."
 
-        qry = str(args)
-        sep = ' => '
-
-        if sep in qry:
-            raw_group = qry[:qry.find(sep)]
-            raw_content = qry[qry.find(sep) + len(sep):]
-
-            self.ping_groups[raw_group] = raw_content
-            self.ping_write()
-            return "Setting {} to {}...".format(raw_group, raw_content)
-
+        if mess.body.find('=>') != -1:
+            self.ping_groups[args[0].strip()] = args[1].strip()
+            return "Setting {} to {}...".format(args[0].strip(), args[1].strip())
         else:
-            return "Correct format is: group{}content".format(sep)
+            return "Correct format is: group{}content".format('=>')
+
+    @botcmd(split_args_with=' ')
+    def ping_remove(self, mess, args):
+        """
+        Cause cancer
+        """
+        if not args:
+            return "Deleting boot.ini....  JK sucker, give me options"
+
+        group = ' '.join(args).lower().strip()
+
+        if self.ping_groups[group]:
+            del(self.ping_groups[group])
+            self.ping_write(None, None)
+            return "Ping group {} deleted.".format(group)
+        else:
+            return "No such group, valid groups are: {}" \
+                .format(", ".join(self.ping_groups))
 
     @botcmd(split_args_with=None)
     def ping_write(self, mess, args):
@@ -110,7 +121,7 @@ class Ping(BotPlugin):
                           "gas": ":jihad:",
                           "chinslaw": ":godwinning:"}
 
-            self.ping_write()
+            self.ping_write(None, None)
             return group_dict
 
     # Leave this in I guess? I don't really know if it's used still.
