@@ -1,62 +1,119 @@
+from os.path import isfile
 from errbot import BotPlugin, botcmd
-from errbot.builtins.webserver import webhook
+import json
 
 
 class Ping(BotPlugin):
-
     """A Ping Group function for Err"""
     min_err_version = '1.6.0'  # Optional, but recommended
-    #max_err_version = '3.0.0'  # Optional, but recommended
 
-    @botcmd(split_args_with="||")
-    def ping_set(self, mess, args):
-        """Create/Update a group."""
-        
-        group_str = str(args[0])
-        group_tuple = group_str.split(" ", 1)
-        
-        if len(group_tuple) > 1:
-            group, text = group_tuple
-            group = group.lower()
-            
-            old_value = self[group]
-            self[group] = text
-            if old_value:
-                return "Updated group '%s', previous value was: %s" % (group, old_value,)
-            else:
-                return "Created group '%s'." % (group,)
-        else:
-            group = group_tuple[0]
-            group = group.lower()
-            if group in self.keys():
-                del self[group]
-                return "Deleted group %s" % group
-        
+    ping_groups_file = 'pings.json'
+
+    def __init__(self):
+        super().__init__()
+        self.ping_groups = self.init_groups()
+
+    def __del__(self):
+        self.ping_write()
+
+    # Bot Commands
+    # =========================================================================
+
     @botcmd(split_args_with=None)
     def ping(self, mess, args):
         """Ping a specified group"""
 
         if not args:
-            return "No Group to Ping, valid groups are {}".format(", ".join(sorted(self.keys())),)
-        
-        group = str(args[0])
-        group = group.lower()
-        
-        group_text = self[group]
-        
-        if group_text is not None:
-            return group_text
+            return "No Group to Ping, valid groups are {}" \
+                .format(", ".join(self.ping_groups))
+
+        qry = args.lowercase
+
+        if qry in self.ping_groups:
+            return " ".join(self.ping_groups[qry])
         else:
-            return "No such group, valid groups are: %s" % (", ".join(sorted(self.keys())),)
-            
+            return "No such group, valid groups are: {}" \
+                .format(", ".join(self.ping_groups))
+
     @botcmd(split_args_with=None)
     def ping_groups(self, mess, args):
         """Show the groups that can be pinged"""
-        
-        groups = self.keys()
-        
-        return ", ".join(sorted(groups))
 
+        return ", ".join(self.ping_groups)
+
+    @botcmd(split_args_with=None, hidden=True)
+    def ping_set(self, mess, args):
+        """
+        Changes the dictionary in which the ping groups are contained, and
+        causes a write to file, serializing the changes immediately.
+        :param args: Everything after !ping_set
+        :return: Output indicating the status change, the dictionary is modified
+        as side effect.
+        """
+        if not args:
+            return "Can't set nothing to nothing. Fix it, dumdum."
+
+        qry = str(args)
+        sep = ' => '
+
+        if sep in qry:
+            raw_group = qry[:qry.find(sep)]
+            raw_content = qry[qry.find(sep) + len(sep):]
+
+            self.ping_groups[raw_group] = raw_content
+            self.ping_write()
+            return "Setting {} to {}...".format(raw_group, raw_content)
+
+        else:
+            return "Correct format is: group{}content".format(sep)
+
+    @botcmd(split_args_with=None)
+    def ping_write(self, mess, args):
+        """
+        Writes the contents of self.ping_groups to self.ping_group_file,
+        serializing any changes made to it.
+
+        Since: 2015-08-07
+        """
+        with open(self.ping_groups_file, 'w') as f:
+            json.dump(self.ping_groups, f, indent=4)
+
+    @botcmd(split_args_with=None)
+    def poop(self, mess, args):
+        return "You and poop are friends."
+
+    # Internal auxiliary methods.
+    # =========================================================================
+
+    def init_groups(self):
+        """
+        Reads groups from file, format for the file is json.
+
+        Will (re)make the file with default groups if the file is missing,
+        and return the dict.
+
+        Since: 2015-08-08
+        :return: dictionary containing the groups in self.ping_groups_file
+        """
+        if isfile(self.ping_groups_file):
+            with open(self.ping_groups_file) as f:
+                group_dict = json.load(f)
+
+            return group_dict
+
+        else:
+            group_dict = {"hr": "shadowozera1, chainsaw_mcginny, wocks_zhar",
+                          "fweight": "umnumun, umnumun_work, Inspector Gair",
+                          "leadership": "rina_kondur, chainsaw_mcginny,"
+                                        " alistair_croup, ipoopedbad_ernaga",
+                          "admin": "vadrin_hegirin, chainsaw_mcginny",
+                          "gas": ":jihad:",
+                          "chinslaw": ":godwinning:"}
+
+            self.ping_write()
+            return group_dict
+
+    # Leave this in I guess? I don't really know if it's used still.
     def __getitem__(self, key):
         try:
             return super(Ping, self).__getitem__(key)
